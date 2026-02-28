@@ -523,9 +523,10 @@ function spawnEnemy(type) {
   } else {
     // Land troops arrive by boat at shoreline
     const angle = rnd(0, Math.PI * 2);
-    // Shore target (where boat docks)
-    const tx = cx + Math.cos(angle) * (islandRx + 18);
-    const ty = cy + Math.sin(angle) * (islandRy + 18);
+    // Shore target = water's edge (just outside beach)
+    const dockDist = islandRx + idef.beach + 10;
+    const tx = cx + Math.cos(angle) * dockDist;
+    const ty = cy + Math.sin(angle) * dockDist;
     // Boat starts further out at sea
     const bx = cx + Math.cos(angle) * (islandRx + 220);
     const by = cy + Math.sin(angle) * (islandRy + 220);
