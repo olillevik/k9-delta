@@ -385,7 +385,7 @@ function allDogs(g) {
   return arr;
 }
 
-
+function rebuildDrones(g) {
   const total = 1 + (g.extraDrones || 0);
   if (!g.drones) g.drones = g.drone ? [g.drone] : [];
   while (g.drones.length < total) {
@@ -1703,7 +1703,6 @@ function drawDrone(drone) {
   ctx.shadowBlur = 0;
 
   ctx.restore(); // end translate
-}
 }
 
 // ========== SHOP ==========
