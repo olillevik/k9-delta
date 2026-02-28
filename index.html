@@ -660,11 +660,11 @@ function update(dt) {
   if (p.fireTimer <= 0 && G.enemies.length > 0) {
     const target = nearestEnemy(p);
     if (target && dist(p, target) <= wdef.range) {
-      fireWeapon(p, target, wdef);
-      p.fireTimer = wdef.rate;
       const aimDir = angle(p, target);
       p.facing = aimDir;
       p.aimLockTimer = 1000; // 1 second sticky aim
+      fireWeapon(p, target, wdef);
+      p.fireTimer = wdef.rate;
     }
   }
 
@@ -1021,15 +1021,19 @@ function nearestEnemy(from) {
 
 function fireWeapon(shooter, target, wdef) {
   const baseAngle = angle(shooter, target);
+  // Offset spawn to muzzle position (20px forward, 4px right of facing)
+  const facing = shooter.facing !== undefined ? shooter.facing : baseAngle;
+  const muzzleX = shooter.x + Math.cos(facing) * 20 + Math.cos(facing + Math.PI/2) * 4;
+  const muzzleY = shooter.y + Math.sin(facing) * 20 + Math.sin(facing + Math.PI/2) * 4;
   for (let i = 0; i < wdef.bullets; i++) {
     const a = baseAngle + (Math.random() - 0.5) * wdef.spread * 2;
     const lifeMs = (wdef.range / wdef.speed) * 1000 + 100;
     const isFlame = wdef.flame || false;
     const isExplosive = wdef.explosive || false;
     G.bullets.push({
-      x: shooter.x, y: shooter.y,
+      x: muzzleX, y: muzzleY,
       vx: Math.cos(a) * wdef.speed, vy: Math.sin(a) * wdef.speed,
-      damage: wdef.damage, r: isFlame ? 5 : (isExplosive ? 7 : 4),
+      damage: wdef.damage, r: isFlame ? 3 : (isExplosive ? 5 : 2.5),
       life: lifeMs, explosive: isExplosive, flame: isFlame,
       color: isFlame ? '#f50' : (isExplosive ? '#f80' : COLORS.bullet),
       pierce: false,
