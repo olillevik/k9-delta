@@ -523,15 +523,20 @@ function spawnEnemy(type) {
   } else {
     // Land troops arrive by boat at shoreline
     const angle = rnd(0, Math.PI * 2);
-    // Shore target = water's edge (ellipse-correct per axis)
-    const tx = cx + Math.cos(angle) * (islandRx + idef.beach + 10);
-    const ty = cy + Math.sin(angle) * (islandRy + idef.beach + 10);
-    // Boat starts further out at sea
-    const bx = cx + Math.cos(angle) * (islandRx + 220);
-    const by = cy + Math.sin(angle) * (islandRy + 220);
+    // Radius of tilted ellipse along this angle
+    const tilt = idef.tilt;
+    const ca = Math.cos(angle - tilt), sa = Math.sin(angle - tilt);
+    const ellipseR = (islandRx * islandRy) /
+      Math.sqrt((islandRy * ca) * (islandRy * ca) + (islandRx * sa) * (islandRx * sa));
+    const beachR  = ellipseR + idef.beach + 14;  // dock at water's edge
+    const startR  = ellipseR + 240;               // start out at sea
+    const tx = cx + Math.cos(angle) * beachR;
+    const ty = cy + Math.sin(angle) * beachR;
+    const bx = cx + Math.cos(angle) * startR;
+    const by = cy + Math.sin(angle) * startR;
     // Troop lands at island edge
-    x = cx + Math.cos(angle) * (islandRx - 20);
-    y = cy + Math.sin(angle) * (islandRy - 20);
+    x = cx + Math.cos(angle) * (ellipseR - 20);
+    y = cy + Math.sin(angle) * (ellipseR - 20);
     // Spawn boat with state machine
     G.boats.push({
       x: bx, y: by,
@@ -1150,13 +1155,11 @@ function render() {
   }
 
   // Shoreline foam
-  ctx.strokeStyle = 'rgba(200,220,255,0.25)';
-  ctx.lineWidth = 8;
-  ctx.setLineDash([30, 20]);
+  ctx.strokeStyle = 'rgba(200,220,255,0.18)';
+  ctx.lineWidth = 6;
   ctx.beginPath();
   ctx.ellipse(cx, cy, islandRx + idef.beach + 3, islandRy + idef.beach + 3, islandTilt, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.setLineDash([]);
 
   // Boats
   if (G.boats) {
