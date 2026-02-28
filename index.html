@@ -337,6 +337,7 @@ function initGame() {
 
   buildWeaponBar();
   startNextWave();
+  lastTime = 0;
   loop();
 }
 
@@ -475,7 +476,7 @@ let lastTime = 0;
 function loop(ts) {
   if (ts === undefined) ts = 0;
   if (G.gameOver) return;
-  const dt = Math.min((ts - lastTime) / 1000, 0.05);
+  const dt = Math.max(0, Math.min((ts - lastTime) / 1000, 0.05));
   lastTime = ts;
   if (!G.shopOpen && !G.paused) {
     update(dt * 1000);
