@@ -30,11 +30,9 @@
   .shop-item .level-fill { height: 100%; background: #0af; border-radius: 2px; transition: width 0.3s; }
   #close-shop { display: block; margin: 18px auto 0; padding: 14px 40px; background: #0af; color: #000; border: none; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: bold; letter-spacing: 2px; width: 100%; box-sizing: border-box; }
   #close-shop:hover { background: #0df; }
-  .wpn-stats { display: flex; gap: 8px; margin-top: 5px; }
-  .wpn-stat { flex: 1; }
-  .wpn-stat-label { font-size: 9px; color: #666; margin-bottom: 2px; }
-  .wpn-stat-bar { height: 3px; background: #222; border-radius: 2px; }
-  .wpn-stat-fill { height: 100%; border-radius: 2px; }
+  .wpn-stats { display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap; }
+  .wpn-stat { font-size: 10px; color: #888; }
+  .wpn-stat-label { color: #555; }
   /* Weapon row: unlock + expand */
   .wpn-row { display: flex; gap: 8px; align-items: stretch; margin-bottom: 8px; }
   .wpn-unlock { flex: 1; background: #111; border: 1px solid #333; border-radius: 6px; padding: 10px 12px; cursor: pointer; pointer-events: all; transition: border-color 0.2s; display: flex; align-items: center; gap: 10px; }
@@ -1789,15 +1787,15 @@ function renderShop(expandedWeaponSection) {
   function wpnStatsHtml(weaponId) {
     const wdef = WEAPON_DEFS.find(w => w.id === weaponId);
     if (!wdef) return '';
-    const dmgPct   = Math.round(wdef.damage / 120 * 100);
-    const ratePct  = Math.round((1 - (wdef.rate - 60) / (1800 - 60)) * 100);
-    const rangePct = Math.round(wdef.range / 700 * 100);
-    const bar = (pct, color) =>
-      '<div class="wpn-stat-bar"><div class="wpn-stat-fill" style="width:' + pct + '%;background:' + color + '"></div></div>';
+    const sps = (1000 / wdef.rate).toFixed(1);
+    const dmg = wdef.bullets > 1 ? wdef.damage + ' x' + wdef.bullets : wdef.damage;
+    const range = wdef.range;
+    const stat = (label, val, color) =>
+      '<div class="wpn-stat"><span class="wpn-stat-label">' + label + '</span> <span style="color:' + color + '">' + val + '</span></div>';
     return '<div class="wpn-stats">' +
-      '<div class="wpn-stat"><div class="wpn-stat-label">SKADE</div>'      + bar(dmgPct,   '#f55') + '</div>' +
-      '<div class="wpn-stat"><div class="wpn-stat-label">ILDRATE</div>'    + bar(ratePct,  '#5af') + '</div>' +
-      '<div class="wpn-stat"><div class="wpn-stat-label">REKKEVIDDE</div>' + bar(rangePct, '#5f5') + '</div>' +
+      stat('SKD', dmg, '#f77') +
+      stat('SPS', sps, '#5af') +
+      stat('RKV', range, '#5f5') +
       '</div>';
   }
 
