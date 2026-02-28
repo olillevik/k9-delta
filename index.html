@@ -1164,37 +1164,37 @@ function render() {
   ctx.fillStyle = '#0a2a4a';
   ctx.fillRect(0, 0, G.mapW, G.mapH);
 
-  // Animated ocean waves — rolling sinusoidal lines
+  // Animated ocean waves — rolling sinusoidal lines (viewport only)
   {
     const wt = G.time * 0.00045;
     const rowSpacing = 38;
-    const rows = Math.ceil(G.mapH / rowSpacing) + 2;
+    const vx0 = G.camX - 60, vx1 = G.camX + canvas.width + 60;
+    const vy0 = G.camY - 60, vy1 = G.camY + canvas.height + 60;
+    const firstRow = Math.max(0, Math.floor(vy0 / rowSpacing) - 1);
+    const lastRow  = Math.min(Math.ceil(G.mapH / rowSpacing) + 1, Math.ceil(vy1 / rowSpacing) + 1);
     ctx.lineWidth = 1.8;
     ctx.lineCap = 'round';
-    for (let r = 0; r < rows; r++) {
-      // Each row scrolls horizontally at a slightly different speed
+    for (let r = firstRow; r < lastRow; r++) {
       const rowPhase = r * 1.7;
-      const scrollX = ((wt * 60 * (1 + r % 3 * 0.15)) % G.mapW);
+      const scrollX = (wt * 60 * (1 + r % 3 * 0.15)) % G.mapW;
       const baseY = r * rowSpacing - (wt * 18 % rowSpacing);
-      // Vary opacity and amplitude per row for depth effect
       const alpha = 0.055 + (r % 5) * 0.012;
       const amp = 5 + (r % 4) * 2.5;
       const freq = 0.012 + (r % 3) * 0.004;
       ctx.globalAlpha = alpha;
       ctx.strokeStyle = r % 2 === 0 ? '#7bd4ff' : '#4aaeee';
       ctx.beginPath();
-      // Draw two wavelengths wide so scrolling is seamless
-      for (let wx = -G.mapW; wx <= G.mapW * 2; wx += 6) {
+      for (let wx = vx0; wx <= vx1; wx += 8) {
         const wy = baseY + Math.sin((wx + scrollX) * freq + rowPhase) * amp
                         + Math.sin((wx + scrollX) * freq * 0.47 + rowPhase * 1.3) * amp * 0.4;
-        if (wx === -G.mapW) ctx.moveTo(wx, wy);
+        if (wx === vx0) ctx.moveTo(wx, wy);
         else ctx.lineTo(wx, wy);
       }
       ctx.stroke();
-      // Small crest highlights every ~180px along the wave
+      // Crest highlights
       ctx.fillStyle = '#beeeff';
       ctx.globalAlpha = alpha * 0.7;
-      for (let wx = -G.mapW + (r * 53 % 180); wx < G.mapW * 2; wx += 180) {
+      for (let wx = vx0 + (r * 53 % 180); wx < vx1; wx += 180) {
         const wy = baseY + Math.sin((wx + scrollX) * freq + rowPhase) * amp;
         ctx.beginPath();
         ctx.ellipse(wx, wy, 9 + (r % 3) * 3, 2, Math.sin(rowPhase) * 0.3, 0, Math.PI * 2);
