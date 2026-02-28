@@ -369,11 +369,11 @@ function createDog(g, offsetY) {
   };
 }
 
-function createDrone(g, orbitOffset) {
+function createDrone(g, orbitOffset, orbitRadius) {
   return {
     x: g.player.x, y: g.player.y - 40,
     r: 9, hp: 80, maxHp: 80,
-    orbitAngle: orbitOffset || 0, orbitRadius: 55,
+    orbitAngle: orbitOffset || 0, orbitRadius: orbitRadius || 55,
     damage: 20, fireRate: 600,
     fireTimer: 0, color: COLORS.drone,
   };
@@ -390,8 +390,10 @@ function rebuildDrones(g) {
   const total = 1 + (g.extraDrones || 0);
   if (!g.drones) g.drones = g.drone ? [g.drone] : [];
   while (g.drones.length < total) {
-    const offset = (g.drones.length / total) * Math.PI * 2;
-    const nd = createDrone(g, offset);
+    const idx = g.drones.length;
+    const offset = (idx / total) * Math.PI * 2;
+    const radius = 55 + idx * 25;
+    const nd = createDrone(g, offset, radius);
     if (g.drones.length > 0) {
       nd.damage = g.drones[0].damage;
       nd.fireRate = g.drones[0].fireRate;
