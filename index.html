@@ -712,121 +712,117 @@ function render() {
 function drawPlayer(p) {
   ctx.save();
   ctx.translate(p.x, p.y);
+  // facing points right (0 rad) = gun pointing right.
+  // Top-down: "forward" is the direction the soldier faces.
   ctx.rotate(p.facing);
 
   // Ground shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
   ctx.beginPath();
-  ctx.ellipse(1, 6, 11, 5, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, 13, 10, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // --- LEGS (behind body) ---
-  // Left leg
-  ctx.fillStyle = '#1e2d1e';
+  // ---- TOP-DOWN VIEW ----
+  // Forward = +X (right). Body is laid out along X axis.
+  // Legs: two ovals splayed left/right of center, slightly behind
+  ctx.fillStyle = '#1a2a18';
   ctx.beginPath();
-  ctx.roundRect(-5, 6, 5, 9, 2);
+  ctx.ellipse(-4, -6, 4, 3, 0.2, 0, Math.PI * 2); // left leg
   ctx.fill();
-  // Right leg
   ctx.beginPath();
-  ctx.roundRect(1, 6, 5, 9, 2);
+  ctx.ellipse(-4, 6, 4, 3, -0.2, 0, Math.PI * 2); // right leg
   ctx.fill();
-  // Boots
+  // Boots (darker, forward of legs)
   ctx.fillStyle = '#111';
   ctx.beginPath();
-  ctx.roundRect(-6, 13, 6, 4, 1);
+  ctx.ellipse(-1, -6, 3, 2.5, 0.3, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.roundRect(1, 13, 6, 4, 1);
+  ctx.ellipse(-1, 6, 3, 2.5, -0.3, 0, Math.PI * 2);
   ctx.fill();
 
-  // --- TORSO (tactical vest) ---
+  // Torso (tactical vest) — wide oval centered slightly forward
   ctx.fillStyle = '#2a3a28';
   ctx.beginPath();
-  ctx.roundRect(-7, -5, 14, 13, 3);
+  ctx.ellipse(1, 0, 9, 7, 0, 0, Math.PI * 2);
   ctx.fill();
-  // Vest plates / webbing
+  // Vest plate highlights
   ctx.fillStyle = '#3a5035';
-  ctx.fillRect(-5, -3, 4, 5);
-  ctx.fillRect(1, -3, 4, 5);
-  ctx.fillStyle = '#1a2a1a';
-  ctx.fillRect(-5, 3, 10, 2); // belt
-
-  // --- LEFT ARM (away from gun direction) ---
-  ctx.fillStyle = '#2a3a28';
-  ctx.save();
-  ctx.translate(-7, 1);
-  ctx.rotate(-0.3);
   ctx.beginPath();
-  ctx.roundRect(-3, 0, 5, 8, 2);
+  ctx.ellipse(2, -3, 4, 2, 0.1, 0, Math.PI * 2);
   ctx.fill();
-  ctx.restore();
+  ctx.beginPath();
+  ctx.ellipse(2, 3, 4, 2, -0.1, 0, Math.PI * 2);
+  ctx.fill();
+  // Webbing stripe down center
+  ctx.fillStyle = '#1e2d1e';
+  ctx.fillRect(-1, -1, 8, 2);
 
-  // --- RIGHT ARM + GUN ---
-  ctx.save();
-  ctx.translate(7, 1);
-  ctx.rotate(0.15);
-  // arm
+  // Arms stretched forward gripping the weapon
   ctx.fillStyle = '#2a3a28';
   ctx.beginPath();
-  ctx.roundRect(-2, 0, 5, 7, 2);
+  ctx.ellipse(5, -5, 5, 2.5, -0.3, 0, Math.PI * 2); // left arm
   ctx.fill();
-  ctx.restore();
+  ctx.beginPath();
+  ctx.ellipse(5, 5, 5, 2.5, 0.3, 0, Math.PI * 2);  // right arm
+  ctx.fill();
 
-  // Gun
+  // Rifle (pointing forward along +X)
+  ctx.fillStyle = '#444';
+  ctx.beginPath();
+  ctx.roundRect(4, -1.5, 18, 3, 1); // receiver + barrel
+  ctx.fill();
+  ctx.fillStyle = '#333';
+  ctx.beginPath();
+  ctx.roundRect(8, -1, 5, 2, 0.5); // handguard detail
+  ctx.fill();
+  ctx.fillStyle = '#666';
+  ctx.beginPath();
+  ctx.roundRect(20, -1, 4, 2, 1); // muzzle
+  ctx.fill();
+  // Stock at rear
   ctx.fillStyle = '#555';
   ctx.beginPath();
-  ctx.roundRect(5, -2, 16, 4, 1);
-  ctx.fill();
-  // Gun detail
-  ctx.fillStyle = '#333';
-  ctx.fillRect(10, -1, 6, 2);
-  // Muzzle
-  ctx.fillStyle = '#777';
-  ctx.beginPath();
-  ctx.roundRect(20, -1.5, 3, 3, 1);
+  ctx.roundRect(2, -2, 4, 4, 1);
   ctx.fill();
 
-  // --- HEAD ---
-  // Helmet base
-  ctx.fillStyle = '#2a3a28';
+  // Head — circle at forward end of torso
+  ctx.fillStyle = '#2a3a28'; // helmet top
   ctx.beginPath();
-  ctx.arc(0, -8, 7, 0, Math.PI * 2);
+  ctx.arc(9, 0, 6, 0, Math.PI * 2);
   ctx.fill();
-  // Helmet top bulge
+  // Helmet rim / shade
+  ctx.strokeStyle = '#1a2a18';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  // Face skin peeking under helmet front
+  ctx.fillStyle = '#b08060';
+  ctx.beginPath();
+  ctx.ellipse(11, 0, 3.5, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Goggles (two small circles on face)
+  ctx.fillStyle = '#1a4a5a';
+  ctx.beginPath();
+  ctx.ellipse(11.5, -1.5, 1.8, 1.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(11.5, 1.5, 1.8, 1.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#557';
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  ctx.ellipse(11.5, -1.5, 1.8, 1.4, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(11.5, 1.5, 1.8, 1.4, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  // Helmet center ridge
   ctx.fillStyle = '#334d30';
   ctx.beginPath();
-  ctx.ellipse(0, -11, 5, 4, 0, Math.PI, 0);
-  ctx.fill();
-  // Face / balaclava
-  ctx.fillStyle = '#c09a70';
-  ctx.beginPath();
-  ctx.ellipse(1, -7, 4, 4.5, 0.1, 0, Math.PI * 2);
-  ctx.fill();
-  // Goggles
-  ctx.fillStyle = '#1a3a4a';
-  ctx.beginPath();
-  ctx.ellipse(-1, -8, 2.5, 1.8, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#2a5a6a';
-  ctx.beginPath();
-  ctx.ellipse(2.5, -8, 2.5, 1.8, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Goggle frames
-  ctx.strokeStyle = '#555';
-  ctx.lineWidth = 0.8;
-  ctx.beginPath();
-  ctx.ellipse(-1, -8, 2.5, 1.8, 0, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.ellipse(2.5, -8, 2.5, 1.8, 0, 0, Math.PI * 2);
-  ctx.stroke();
-  // Helmet brim
-  ctx.fillStyle = '#1e2d1e';
-  ctx.beginPath();
-  ctx.roundRect(-7, -7, 14, 3, 1);
+  ctx.ellipse(8, 0, 5, 1.5, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Glow ring (team indicator)
+  // Glow ring
   ctx.shadowBlur = 8;
   ctx.shadowColor = '#4af';
   ctx.strokeStyle = '#4af8';
@@ -866,9 +862,10 @@ function drawEnemy(e) {
     ctx.lineTo(Math.cos(a2) * e.r * 1.1, Math.sin(a2) * e.r * 1.1);
     ctx.stroke();
   } else {
-    // --- Enemy Soldier / Heavy ---
+    // --- Enemy Soldier / Heavy  — TOP-DOWN ---
+    // Rotate so the soldier faces the player. Forward = +X in local space.
     const a2 = angle(e, G.player);
-    ctx.rotate(a2 + Math.PI / 2);
+    ctx.rotate(a2);
 
     const s = e.type === 'heavy' ? 1.35 : 1.0;
     const uniformColor = e.type === 'heavy' ? '#5a3010' : '#6b2020';
@@ -878,80 +875,89 @@ function drawEnemy(e) {
     // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();
-    ctx.ellipse(0, 5 * s, 8 * s, 4 * s, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, 10 * s, 8 * s, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Legs
+    // Legs — two ovals behind (left of) the torso
     ctx.fillStyle = uniformColor;
     ctx.beginPath();
-    ctx.roundRect(-5 * s, 5 * s, 4 * s, 8 * s, 2);
+    ctx.ellipse(-5 * s, -5 * s, 4 * s, 3 * s, 0.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.roundRect(1 * s, 5 * s, 4 * s, 8 * s, 2);
+    ctx.ellipse(-5 * s, 5 * s, 4 * s, 3 * s, -0.2, 0, Math.PI * 2);
     ctx.fill();
-    // Boots
+    // Boots (darker, slightly further back)
     ctx.fillStyle = '#1a0a0a';
     ctx.beginPath();
-    ctx.roundRect(-6 * s, 11 * s, 5 * s, 4 * s, 1);
+    ctx.ellipse(-2 * s, -5 * s, 3 * s, 2 * s, 0.1, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.roundRect(1 * s, 11 * s, 5 * s, 4 * s, 1);
+    ctx.ellipse(-2 * s, 5 * s, 3 * s, 2 * s, -0.1, 0, Math.PI * 2);
     ctx.fill();
 
     // Torso
     ctx.fillStyle = uniformColor;
     ctx.beginPath();
-    ctx.roundRect(-6 * s, -5 * s, 12 * s, 12 * s, 3);
+    ctx.ellipse(0, 0, 8 * s, 6 * s, 0, 0, Math.PI * 2);
     ctx.fill();
-    // Chest badge / rank stripe
+    // Rank/badge stripe on chest
     ctx.fillStyle = accentColor;
-    ctx.fillRect(-4 * s, -3 * s, 8 * s, 2 * s);
+    ctx.beginPath();
+    ctx.ellipse(1 * s, 0, 4 * s, 1.5 * s, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Arms
+    // Arms reaching forward
     ctx.fillStyle = uniformColor;
-    ctx.save();
-    ctx.translate(-6 * s, 1 * s);
-    ctx.rotate(-0.25);
     ctx.beginPath();
-    ctx.roundRect(-3 * s, 0, 4 * s, 7 * s, 2);
+    ctx.ellipse(4 * s, -4.5 * s, 4.5 * s, 2 * s, -0.3, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
-    ctx.save();
-    ctx.translate(6 * s, 1 * s);
-    ctx.rotate(0.2);
     ctx.beginPath();
-    ctx.roundRect(-1 * s, 0, 4 * s, 7 * s, 2);
+    ctx.ellipse(4 * s, 4.5 * s, 4.5 * s, 2 * s, 0.3, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
 
-    // Gun (pointing "up" since we rotated)
+    // Gun (pointing forward along +X)
     ctx.fillStyle = '#444';
     ctx.beginPath();
-    ctx.roundRect(-2 * s, -18 * s, 4 * s, 14 * s, 1);
+    ctx.roundRect(3 * s, -1.5 * s, 16 * s, 3 * s, 1);
     ctx.fill();
     ctx.fillStyle = '#333';
-    ctx.fillRect(-1 * s, -22 * s, 2 * s, 5 * s);
-
-    // Head
-    ctx.fillStyle = '#b07050';
+    ctx.fillRect(7 * s, -1 * s, 5 * s, 2 * s);
+    ctx.fillStyle = '#666';
     ctx.beginPath();
-    ctx.ellipse(0, -10 * s, 5 * s, 5.5 * s, 0, 0, Math.PI * 2);
+    ctx.roundRect(18 * s, -1 * s, 3 * s, 2 * s, 1);
     ctx.fill();
-    // Helmet
+
+    // Head — at the forward tip of torso
+    ctx.fillStyle = '#b07050'; // skin
+    ctx.beginPath();
+    ctx.arc(9 * s, 0, 5 * s, 0, Math.PI * 2);
+    ctx.fill();
+    // Helmet over head
     ctx.fillStyle = helmetColor;
     ctx.beginPath();
-    ctx.ellipse(0, -13 * s, 5.5 * s, 4.5 * s, 0, Math.PI, 0);
+    ctx.arc(9 * s, 0, 5.5 * s, 0, Math.PI * 2);
+    ctx.fill();
+    // Helmet rim
+    ctx.strokeStyle = uniformColor;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Face gap (front of helmet open)
+    ctx.fillStyle = '#b07050';
+    ctx.beginPath();
+    ctx.ellipse(11 * s, 0, 3 * s, 2.5 * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Red eyes
+    ctx.fillStyle = '#ff3333';
+    ctx.beginPath();
+    ctx.ellipse(11 * s, -1.4 * s, 1.2 * s, 1 * s, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.roundRect(-5.5 * s, -11 * s, 11 * s, 3 * s, 1);
+    ctx.ellipse(11 * s, 1.4 * s, 1.2 * s, 1 * s, 0, 0, Math.PI * 2);
     ctx.fill();
-    // Eyes
-    ctx.fillStyle = '#ff4444';
+    // Helmet top ridge
+    ctx.fillStyle = '#2a1204';
     ctx.beginPath();
-    ctx.ellipse(-2 * s, -10.5 * s, 1.5 * s, 1.2 * s, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(2 * s, -10.5 * s, 1.5 * s, 1.2 * s, 0, 0, Math.PI * 2);
+    ctx.ellipse(8 * s, 0, 4 * s, 1.2 * s, 0, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -975,191 +981,167 @@ function drawDog(dog) {
   ctx.save();
   ctx.translate(dog.x, dog.y);
 
-  // Face direction toward target or player
-  const target = dog.target && dog.target.hp > 0 ? dog.target : G.player;
-  const faceAngle = angle(dog, target);
-  ctx.rotate(faceAngle - Math.PI / 2);
+  // Forward = +X. Rotate so snout points toward target.
+  const dogTarget = dog.target && dog.target.hp > 0 ? dog.target : G.player;
+  ctx.rotate(angle(dog, dogTarget));
 
-  // Animated tail wag
+  // Animated tail wag (tail is at -X end)
   const waggle = Math.sin(G.time * 0.012) * 0.5;
 
   // Shadow
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.beginPath();
-  ctx.ellipse(0, 10, 8, 4, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, 12, 7, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Tail
+  // Tail (at rear, -X side)
   ctx.save();
-  ctx.translate(0, 8);
+  ctx.translate(-9, 0);
   ctx.rotate(waggle);
   ctx.fillStyle = '#b07030';
   ctx.beginPath();
-  ctx.moveTo(-2, 0);
-  ctx.quadraticCurveTo(-8, 6, -4, 14);
-  ctx.quadraticCurveTo(0, 16, 2, 10);
-  ctx.quadraticCurveTo(4, 4, 2, 0);
+  ctx.moveTo(0, -2);
+  ctx.quadraticCurveTo(-6, -6, -10, -2);
+  ctx.quadraticCurveTo(-12, 0, -10, 2);
+  ctx.quadraticCurveTo(-6, 6, 0, 2);
   ctx.closePath();
   ctx.fill();
-  // tail tip lighter
   ctx.fillStyle = '#d09050';
   ctx.beginPath();
-  ctx.ellipse(-3, 13, 2, 3, -0.3, 0, Math.PI * 2);
+  ctx.ellipse(-10, 0, 2.5, 2, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
-  // Back legs
+  // Back legs (splayed outward at rear)
   ctx.fillStyle = '#a06828';
-  // back left
-  ctx.save();
-  ctx.translate(-5, 7);
-  ctx.rotate(0.2);
   ctx.beginPath();
-  ctx.roundRect(-2, 0, 4, 7, 2);
+  ctx.ellipse(-5, -6, 4, 2.5, 0.3, 0, Math.PI * 2);
   ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(-5, 6, 4, 2.5, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  // Back paws
   ctx.fillStyle = '#333';
   ctx.beginPath();
-  ctx.ellipse(-1, 7, 2.5, 1.5, 0.2, 0, Math.PI * 2);
+  ctx.ellipse(-2, -6, 2.5, 1.8, 0.2, 0, Math.PI * 2);
   ctx.fill();
-  ctx.restore();
-  // back right
-  ctx.save();
-  ctx.translate(5, 7);
-  ctx.rotate(-0.2);
   ctx.beginPath();
-  ctx.roundRect(-2, 0, 4, 7, 2);
+  ctx.ellipse(-2, 6, 2.5, 1.8, -0.2, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#333';
-  ctx.beginPath();
-  ctx.ellipse(1, 7, 2.5, 1.5, -0.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
 
-  // Body
+  // Body — elongated oval along X axis
   ctx.fillStyle = '#c8822a';
   ctx.beginPath();
-  ctx.ellipse(0, 3, 7, 9, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, 9, 6, 0, 0, Math.PI * 2);
   ctx.fill();
-  // Back saddle marking (darker patch)
+  // Saddle patch (darker)
   ctx.fillStyle = '#a06020';
   ctx.beginPath();
-  ctx.ellipse(0, 2, 4, 6, 0, 0, Math.PI * 2);
+  ctx.ellipse(-1, 0, 5, 4, 0, 0, Math.PI * 2);
   ctx.fill();
-  // Belly (lighter)
+  // Belly (lighter center stripe)
   ctx.fillStyle = '#e0a050';
   ctx.beginPath();
-  ctx.ellipse(0, 5, 3.5, 5, 0, 0, Math.PI * 2);
+  ctx.ellipse(1, 0, 5, 2.5, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Front legs
+  // Front legs (forward, splayed)
   ctx.fillStyle = '#c8822a';
-  // front left
-  ctx.save();
-  ctx.translate(-5, -3);
-  ctx.rotate(-0.15);
   ctx.beginPath();
-  ctx.roundRect(-2, 0, 4, 8, 2);
+  ctx.ellipse(5, -6, 4, 2.5, -0.3, 0, Math.PI * 2);
   ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(5, 6, 4, 2.5, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  // Front paws
   ctx.fillStyle = '#333';
   ctx.beginPath();
-  ctx.ellipse(-1, 8, 2.5, 1.5, 0.1, 0, Math.PI * 2);
+  ctx.ellipse(2, -6, 2.5, 1.8, -0.2, 0, Math.PI * 2);
   ctx.fill();
-  ctx.restore();
-  // front right
-  ctx.save();
-  ctx.translate(5, -3);
-  ctx.rotate(0.15);
   ctx.beginPath();
-  ctx.roundRect(-2, 0, 4, 8, 2);
+  ctx.ellipse(2, 6, 2.5, 1.8, 0.2, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#333';
-  ctx.beginPath();
-  ctx.ellipse(1, 8, 2.5, 1.5, -0.1, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
 
   // Neck
   ctx.fillStyle = '#c8822a';
   ctx.beginPath();
-  ctx.ellipse(0, -8, 5, 6, 0, 0, Math.PI * 2);
+  ctx.ellipse(9, 0, 4, 4.5, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Collar (tactical red)
+  // Collar (tactical red, around neck)
   ctx.fillStyle = '#cc2222';
   ctx.beginPath();
-  ctx.rect(-5, -11, 10, 3);
+  ctx.ellipse(8, 0, 3.5, 5, 0, 0, Math.PI * 2);
   ctx.fill();
+  ctx.fillStyle = '#c8822a'; // neck skin inside collar
+  ctx.beginPath();
+  ctx.ellipse(8, 0, 2.5, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Tag
   ctx.fillStyle = '#ffaa00';
   ctx.beginPath();
-  ctx.arc(0, -10, 1.5, 0, Math.PI * 2);
-  ctx.fill(); // tag
+  ctx.arc(7, 4, 1.5, 0, Math.PI * 2);
+  ctx.fill();
 
-  // Head
+  // Head — at +X tip
   ctx.fillStyle = '#d89040';
   ctx.beginPath();
-  ctx.ellipse(0, -16, 6, 6, 0, 0, Math.PI * 2);
+  ctx.ellipse(13, 0, 6, 5.5, 0, 0, Math.PI * 2);
   ctx.fill();
+
+  // Ears (floppy, on top/bottom of head from above)
+  ctx.fillStyle = '#a86020';
+  ctx.beginPath();
+  ctx.ellipse(12, -7, 3, 5, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(12, 7, 3, 5, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+
   // Snout
   ctx.fillStyle = '#b87030';
   ctx.beginPath();
-  ctx.ellipse(0, -13, 4, 3.5, 0, 0, Math.PI * 2);
+  ctx.ellipse(17, 0, 4, 3, 0, 0, Math.PI * 2);
   ctx.fill();
   // Nose
-  ctx.fillStyle = '#222';
+  ctx.fillStyle = '#111';
   ctx.beginPath();
-  ctx.ellipse(0, -12, 2, 1.5, 0, 0, Math.PI * 2);
+  ctx.ellipse(20, 0, 2, 1.5, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = '#555';
   ctx.beginPath();
-  ctx.arc(0, -12, 0.6, 0, Math.PI * 2);
+  ctx.arc(20, 0, 0.7, 0, Math.PI * 2);
   ctx.fill();
 
-  // Eyes
+  // Eyes (on sides of head, from above)
   ctx.fillStyle = '#111';
   ctx.beginPath();
-  ctx.arc(-2.5, -17, 1.5, 0, Math.PI * 2);
+  ctx.arc(13, -4.5, 1.5, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(2.5, -17, 1.5, 0, Math.PI * 2);
+  ctx.arc(13, 4.5, 1.5, 0, Math.PI * 2);
   ctx.fill();
-  // Eye shine
   ctx.fillStyle = '#fff';
   ctx.beginPath();
-  ctx.arc(-2, -17.5, 0.5, 0, Math.PI * 2);
+  ctx.arc(13.5, -5, 0.5, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(3, -17.5, 0.5, 0, Math.PI * 2);
+  ctx.arc(13.5, 4, 0.5, 0, Math.PI * 2);
   ctx.fill();
 
-  // Ears (floppy)
-  ctx.fillStyle = '#a86020';
-  // left ear
-  ctx.save();
-  ctx.translate(-5, -18);
-  ctx.rotate(-0.3);
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 3, 6, 0.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-  // right ear
-  ctx.save();
-  ctx.translate(5, -18);
-  ctx.rotate(0.3);
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 3, 6, -0.2, 0, Math.PI * 2);
-  ctx.fill();
   ctx.restore();
 
-  // HP bar
+  // HP bar (axis-aligned, drawn after restore)
+  ctx.save();
+  ctx.translate(dog.x, dog.y);
   const bw = 28;
   ctx.fillStyle = '#300';
-  ctx.fillRect(-bw / 2, 22, bw, 4);
+  ctx.fillRect(-bw / 2, -20, bw, 4);
   ctx.fillStyle = '#0c0';
-  ctx.fillRect(-bw / 2, 22, bw * (dog.hp / dog.maxHp), 4);
+  ctx.fillRect(-bw / 2, -20, bw * Math.max(0, dog.hp / dog.maxHp), 4);
   ctx.strokeStyle = '#050';
   ctx.lineWidth = 0.5;
-  ctx.strokeRect(-bw / 2, 22, bw, 4);
-
+  ctx.strokeRect(-bw / 2, -20, bw, 4);
   ctx.restore();
 }
 
