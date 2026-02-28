@@ -1043,14 +1043,14 @@ function fireWeapon(shooter, target, wdef) {
 
 function hitEnemy(e, dmg) {
   e.hp -= dmg;
-  G.floatTexts.push({ x: e.x, y: e.y - e.r, text: '-' + Math.ceil(dmg), life: 600, color: '#ff0', size: 12 });
+  G.floatTexts.push({ x: e.x, y: e.y - e.r, text: '-' + Math.ceil(dmg), life: 600, maxLife: 600, color: '#ff0', size: 12 });
 }
 
 function explodeAt(x, y, dmg, radius, color) {
   spawnParticles(G, x, y, color || '#f80', 22, 80, 260, 300, 700, 4, 10);
   spawnParticles(G, x, y, '#fff', 8, 40, 120, 100, 250, 2, 5);
   // Screen flash ring
-  G.floatTexts.push({ x, y, text: '', life: 120, color: color || '#f80', size: 0, isBlast: true, blastR: radius });
+  G.floatTexts.push({ x, y, text: '', life: 120, maxLife: 120, color: color || '#f80', size: 0, isBlast: true, blastR: radius });
   const p = G.player;
   const dToPlayer = dist({x, y}, p);
   if (p.invincibleTimer <= 0 && dToPlayer < radius) {
@@ -1070,7 +1070,7 @@ function killEnemy(e, idx) {
   G.score += e.score;
   G.coins += e.coins;
   spawnParticles(G, e.x, e.y, e.color, 12, 40, 160, 300, 700, 3, 6);
-  G.floatTexts.push({ x: e.x, y: e.y - 20, text: '+' + e.coins, life: 900, color: '#ff0', size: 13 });
+  G.floatTexts.push({ x: e.x, y: e.y - 20, text: '+' + e.coins, life: 900, maxLife: 900, color: '#ff0', size: 13 });
 }
 
 function takeDamage(dmg) {
@@ -1443,7 +1443,8 @@ function render() {
   });
 
   G.floatTexts.forEach(t => {
-    ctx.globalAlpha = Math.min(1, t.life / 300);
+    const maxLife = t.maxLife || 600;
+    ctx.globalAlpha = Math.min(1, t.life / maxLife);
     ctx.fillStyle = t.color;
     ctx.font = 'bold ' + (t.size || 13) + 'px Courier New';
     ctx.textAlign = 'center';
