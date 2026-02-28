@@ -1100,15 +1100,8 @@ function drawPlayer(p) {
   ctx.translate(p.x, p.y);
   ctx.rotate(p.facing);
   drawSoldierTopDown(1.0, '#2e4a2a', '#2a3a28', '#3a5035', '#b08060', '#1a4a5a');
-  ctx.shadowBlur = 8;
-  ctx.shadowColor = '#4af';
-  ctx.strokeStyle = '#4af8';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.arc(0, 0, p.r + 2, 0, Math.PI*2);
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-  ctx.restore();
+   ctx.shadowBlur = 0;
+   ctx.restore();
 }
 
 function drawEnemy(e) {
@@ -1693,17 +1686,7 @@ function drawDrone(drone) {
 
   ctx.restore(); // end gun rotation
 
-  // Friendly glow ring
-  ctx.shadowBlur = 9;
-  ctx.shadowColor = 'rgba(60,220,100,0.6)';
-  ctx.strokeStyle = 'rgba(60,200,80,0.28)';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.arc(0, 0, 20, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-
-  ctx.restore(); // end translate
+   ctx.restore(); // end translate
 }
 
 // ========== SHOP ==========
