@@ -448,13 +448,13 @@ function showWaveBanner(txt) {
 function buildWaveQueue() {
   const n = G.wave;
   const queue = [];
-  const soldierCount = Math.floor(5 + n * 2.5 + n * n * 0.3);
-  const heavyCount   = Math.floor(n * 0.8 + n * n * 0.08);
-  const vehicleCount = Math.floor(n * 0.5 + n * n * 0.04);
+  const soldierCount = Math.floor(3 + n * 1.8 + n * n * 0.1);
+  const heavyCount   = Math.floor(n * 0.5 + n * n * 0.04);
+  const vehicleCount = Math.floor(n * 0.3 + n * n * 0.02);
   // Enemy drones appear from wave 4
-  const eDroneCount  = n >= 4 ? Math.floor((n - 3) * 1.2 + (n - 3) * (n - 3) * 0.05) : 0;
+  const eDroneCount  = n >= 4 ? Math.floor((n - 3) * 0.8 + (n - 3) * (n - 3) * 0.03) : 0;
   // Helicopters appear from wave 7
-  const heliCount    = n >= 7 ? Math.floor((n - 6) * 0.8 + (n - 6) * (n - 6) * 0.04) : 0;
+  const heliCount    = n >= 7 ? Math.floor((n - 6) * 0.5 + (n - 6) * (n - 6) * 0.02) : 0;
 
   for (let i = 0; i < soldierCount; i++) queue.push({ type: 'soldier', delay: i * 350 });
   for (let i = 0; i < heavyCount;   i++) queue.push({ type: 'heavy',   delay: 600 + i * 500 });
@@ -481,20 +481,20 @@ function spawnEnemy(type) {
   x = Math.max(20, Math.min(G.mapW - 20, x));
   y = Math.max(20, Math.min(G.mapH - 20, y));
 
-  const hpScale  = Math.pow(1.12, G.wave - 1);
-  const spdScale = 1 + (G.wave - 1) * 0.05;
+  const hpScale  = Math.pow(1.07, G.wave - 1);
+  const spdScale = 1 + (G.wave - 1) * 0.03;
   if (type === 'soldier') {
-    G.enemies.push({ type:'soldier', x, y, r:11, hp: 40*hpScale, maxHp:40*hpScale, speed:(80+G.wave*2)*spdScale, damage:10+G.wave*0.5, fireRate:1400, fireTimer:rnd(0,1400), range:280, color:COLORS.enemySoldier, score:10, coins:rndInt(2,5) });
+    G.enemies.push({ type:'soldier', x, y, r:11, hp: 40*hpScale, maxHp:40*hpScale, speed:(70+G.wave*1.5)*spdScale, damage:10+G.wave*0.4, fireRate:1400, fireTimer:rnd(0,1400), range:280, color:COLORS.enemySoldier, score:10, coins:rndInt(2,5) });
   } else if (type === 'heavy') {
-    G.enemies.push({ type:'heavy', x, y, r:16, hp: 140*hpScale, maxHp:140*hpScale, speed:(55+G.wave*1.5)*spdScale, damage:18+G.wave*0.8, fireRate:900, fireTimer:rnd(0,900), range:240, color:COLORS.enemyHeavy, score:30, coins:rndInt(8,14) });
+    G.enemies.push({ type:'heavy', x, y, r:16, hp: 140*hpScale, maxHp:140*hpScale, speed:(45+G.wave*1.2)*spdScale, damage:18+G.wave*0.6, fireRate:900, fireTimer:rnd(0,900), range:240, color:COLORS.enemyHeavy, score:30, coins:rndInt(8,14) });
   } else if (type === 'vehicle') {
-    G.enemies.push({ type:'vehicle', x, y, r:22, hp: 300*hpScale, maxHp:300*hpScale, speed:(100+G.wave*3)*spdScale, damage:25+G.wave*1.2, fireRate:1800, fireTimer:rnd(0,1800), range:350, color:COLORS.enemyVehicle, score:80, coins:rndInt(20,35) });
+    G.enemies.push({ type:'vehicle', x, y, r:22, hp: 300*hpScale, maxHp:300*hpScale, speed:(80+G.wave*2)*spdScale, damage:25+G.wave*1.0, fireRate:1800, fireTimer:rnd(0,1800), range:350, color:COLORS.enemyVehicle, score:80, coins:rndInt(20,35) });
   } else if (type === 'edrone') {
     // Kamikaze drone — flies directly at player and explodes on contact
-    G.enemies.push({ type:'edrone', x, y, r:10, hp: 25*hpScale, maxHp:25*hpScale, speed:(160+G.wave*4)*spdScale, damage:0, fireRate:99999, fireTimer:0, range:0, color:COLORS.enemyDrone, score:25, coins:rndInt(5,10), explodeDmg:40+G.wave*2, spinAngle:0 });
+    G.enemies.push({ type:'edrone', x, y, r:10, hp: 25*hpScale, maxHp:25*hpScale, speed:(140+G.wave*3)*spdScale, damage:0, fireRate:99999, fireTimer:0, range:0, color:COLORS.enemyDrone, score:25, coins:rndInt(5,10), explodeDmg:35+G.wave*1.5, spinAngle:0 });
   } else if (type === 'heli') {
     // Helicopter — hovers at medium range, fires proximity rockets
-    G.enemies.push({ type:'heli', x, y, r:20, hp: 220*hpScale, maxHp:220*hpScale, speed:(70+G.wave*2)*spdScale, damage:0, fireRate:2200, fireTimer:rnd(0,2200), range:400, color:COLORS.enemyHeli, score:60, coins:rndInt(15,25), rocketDmg:30+G.wave*1.5, rotorAngle:0 });
+    G.enemies.push({ type:'heli', x, y, r:20, hp: 220*hpScale, maxHp:220*hpScale, speed:(60+G.wave*1.5)*spdScale, damage:0, fireRate:2200, fireTimer:rnd(0,2200), range:400, color:COLORS.enemyHeli, score:60, coins:rndInt(15,25), rocketDmg:28+G.wave*1.2, rotorAngle:0 });
   }
 }
 
