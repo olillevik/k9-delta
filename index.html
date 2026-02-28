@@ -2,7 +2,7 @@
 <html lang="no">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>K9-Delta</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -36,6 +36,7 @@
   #restart-btn { margin-top: 24px; padding: 12px 40px; background: #f00; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 16px; letter-spacing: 2px; }
   #restart-btn:hover { background: #f44; }
   #controls-hint { position: fixed; bottom: 10px; left: 10px; font-size: 11px; color: #444; }
+  @media (hover: none) { #controls-hint { display: none; } }
   #weapon-bar { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; }
   .weapon-slot { width: 54px; height: 54px; background: #111; border: 2px solid #333; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: #888; cursor: pointer; pointer-events: all; transition: border-color 0.2s; }
   .weapon-slot.active { border-color: #ff0; color: #ff0; }
@@ -269,6 +270,7 @@ function upgradeCost(upg, currentLevel) {
 let G;
 let keys = {};
 let animFrame;
+const joystick = { active: false, touchId: null, baseX: 0, baseY: 0, dx: 0, dy: 0 };
 
 // ========== HELPERS ==========
 function rnd(a, b) { return a + Math.random() * (b - a); }
@@ -496,12 +498,14 @@ function update(dt) {
   G.camX = p.x - canvas.width / 2;
   G.camY = p.y - canvas.height / 2;
 
-  let dx = 0, dy = 0;
+  let dx = joystick.dx;
+  let dy = joystick.dy;
   if (keys['w'] || keys['arrowup'])    dy -= 1;
   if (keys['s'] || keys['arrowdown'])  dy += 1;
   if (keys['a'] || keys['arrowleft'])  dx -= 1;
   if (keys['d'] || keys['arrowright']) dx += 1;
-  if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+  const dlen = Math.hypot(dx, dy);
+  if (dlen > 1) { dx /= dlen; dy /= dlen; }
   p.x = Math.max(p.r, Math.min(G.mapW - p.r, p.x + dx * p.speed * dtSec));
   p.y = Math.max(p.r, Math.min(G.mapH - p.r, p.y + dy * p.speed * dtSec));
 
@@ -986,6 +990,23 @@ function render() {
   ctx.strokeStyle = '#444';
   ctx.lineWidth = 1;
   ctx.strokeRect(bx, by, barW, barH);
+
+  // Virtual joystick (touch only)
+  if (joystick.active || 'ontouchstart' in window) {
+    const jR = 55, nR = 22;
+    const jx = joystick.active ? joystick.baseX : jR + 24;
+    const jy = joystick.active ? joystick.baseY : canvas.height - jR - 24;
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(jx, jy, jR, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = joystick.active ? 0.7 : 0.2;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(jx + joystick.dx * jR, jy + joystick.dy * jR, nR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
 }
 
 // ========== DRAW FUNCTIONS ==========
@@ -1824,6 +1845,71 @@ document.addEventListener('keydown', e => {
 document.addEventListener('keyup', e => {
   keys[e.key.toLowerCase()] = false;
 });
+
+// ========== TOUCH / JOYSTICK ==========
+const JOY_RADIUS = 55;
+
+function joyStart(x, y, id) {
+  joystick.active = true;
+  joystick.touchId = id;
+  joystick.baseX = x;
+  joystick.baseY = y;
+  joystick.dx = 0;
+  joystick.dy = 0;
+}
+
+function joyMove(x, y) {
+  const raw_dx = x - joystick.baseX;
+  const raw_dy = y - joystick.baseY;
+  const len = Math.hypot(raw_dx, raw_dy);
+  if (len > JOY_RADIUS) {
+    joystick.dx = raw_dx / len;
+    joystick.dy = raw_dy / len;
+  } else {
+    joystick.dx = raw_dx / JOY_RADIUS;
+    joystick.dy = raw_dy / JOY_RADIUS;
+  }
+}
+
+function joyEnd() {
+  joystick.active = false;
+  joystick.touchId = null;
+  joystick.dx = 0;
+  joystick.dy = 0;
+}
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    // Only track first joystick touch (left half of screen)
+    if (!joystick.active && t.clientX < canvas.width * 0.5) {
+      joyStart(t.clientX, t.clientY, t.identifier);
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.identifier === joystick.touchId) {
+      joyMove(t.clientX, t.clientY);
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.identifier === joystick.touchId) {
+      joyEnd();
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchcancel', e => {
+  e.preventDefault();
+  joyEnd();
+}, { passive: false });
 
 // ========== START ==========
 initGame();
