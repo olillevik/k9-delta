@@ -218,23 +218,23 @@ const UPGRADES = [
     onBuy: (g) => { g.player.speed *= 1.10; } },
 
   // --- Dog ---
-  { id: 'dog',      section: 'Rex (hund)', name: 'Rekrutter Rex',      icon: '🐕',
+  { id: 'dog',      section: 'Hunder', name: 'Rekrutter Rex',      icon: '🐕',
     maxLevel: 1, baseCost: 150,
     desc: () => 'Rex jakter og biter fiender',
-    onBuy: (g) => { g.dog = createDog(g); } },
-  { id: 'dog2',     section: 'Rex (hund)', name: 'Rekrutter Buddy',     icon: '🐶',
+    onBuy: (g) => { g.dog = createDog(g, -18); } },
+  { id: 'dog2',     section: 'Hunder', name: 'Rekrutter Buddy',     icon: '🐶',
     maxLevel: 1, baseCost: 200, requires: 'dog',
-    desc: () => 'En ekstra hund jakter ved siden av Rex',
-    onBuy: (g) => { g.dog2 = createDog(g); if(g.dog){ g.dog2.damage=g.dog.damage; g.dog2.speed=g.dog.speed; g.dog2.attackRate=g.dog.attackRate; } } },
-  { id: 'dog_dmg',  section: 'Rex (hund)', name: 'Rex: Bittskade',     icon: '🦷',
+    desc: () => 'Buddy jakter ved siden av Rex',
+    onBuy: (g) => { g.dog2 = createDog(g, 18); if(g.dog){ g.dog2.damage=g.dog.damage; g.dog2.speed=g.dog.speed; g.dog2.attackRate=g.dog.attackRate; } } },
+  { id: 'dog_dmg',  section: 'Hunder', name: 'Bittskade',           icon: '🦷',
     maxLevel: Infinity, baseCost: 80, costScale: 1.4, requires: 'dog',
     desc: (lvl) => '+30% bittskade (Total: +' + Math.round((Math.pow(1.3,lvl)-1)*100) + '%)',
     onBuy: (g) => { allDogs(g).forEach(d => { d.damage *= 1.3; }); } },
-  { id: 'dog_spd',  section: 'Rex (hund)', name: 'Rex: Hastighet',     icon: '🐾',
+  { id: 'dog_spd',  section: 'Hunder', name: 'Hastighet',           icon: '🐾',
     maxLevel: Infinity, baseCost: 70, costScale: 1.35, requires: 'dog',
     desc: () => '+20% hundehastighet',
     onBuy: (g) => { allDogs(g).forEach(d => { d.speed *= 1.20; }); } },
-  { id: 'dog_rate', section: 'Rex (hund)', name: 'Rex: Angrepsrate',   icon: '💢',
+  { id: 'dog_rate', section: 'Hunder', name: 'Angrepsrate',         icon: '💢',
     maxLevel: Infinity, baseCost: 75, costScale: 1.4, requires: 'dog',
     desc: () => '+20% raskere angrep',
     onBuy: (g) => { allDogs(g).forEach(d => { d.attackRate *= 0.80; }); } },
@@ -358,9 +358,9 @@ function createPlayer() {
   };
 }
 
-function createDog(g) {
+function createDog(g, offsetY) {
   return {
-    x: g.player.x - 30, y: g.player.y,
+    x: g.player.x - 30, y: g.player.y + (offsetY || 0),
     r: 10, hp: 120, maxHp: 120,
     speed: 220, damage: 25,
     attackCooldown: 0, attackRate: 800,
@@ -464,7 +464,7 @@ function spawnEnemy(type) {
     G.enemies.push({ type:'vehicle', x, y, r:22, hp: 300*hpScale, maxHp:300*hpScale, speed:(100+G.wave*3)*spdScale, damage:25+G.wave*1.2, fireRate:1800, fireTimer:rnd(0,1800), range:350, color:COLORS.enemyVehicle, score:80, coins:rndInt(20,35) });
   } else if (type === 'edrone') {
     // Kamikaze drone — flies directly at player and explodes on contact
-    G.enemies.push({ type:'edrone', x, y, r:10, hp: 55*hpScale, maxHp:55*hpScale, speed:(160+G.wave*4)*spdScale, damage:0, fireRate:99999, fireTimer:0, range:0, color:COLORS.enemyDrone, score:25, coins:rndInt(5,10), explodeDmg:40+G.wave*2, spinAngle:0 });
+    G.enemies.push({ type:'edrone', x, y, r:10, hp: 25*hpScale, maxHp:25*hpScale, speed:(160+G.wave*4)*spdScale, damage:0, fireRate:99999, fireTimer:0, range:0, color:COLORS.enemyDrone, score:25, coins:rndInt(5,10), explodeDmg:40+G.wave*2, spinAngle:0 });
   } else if (type === 'heli') {
     // Helicopter — hovers at medium range, fires proximity rockets
     G.enemies.push({ type:'heli', x, y, r:20, hp: 220*hpScale, maxHp:220*hpScale, speed:(70+G.wave*2)*spdScale, damage:0, fireRate:2200, fireTimer:rnd(0,2200), range:400, color:COLORS.enemyHeli, score:60, coins:rndInt(15,25), rocketDmg:30+G.wave*1.5, rotorAngle:0 });
@@ -829,15 +829,23 @@ function takeDamage(dmg) {
 }
 
 function updateDog(dog, dtSec) {
-  if (!dog.target || dog.target.hp <= 0 || dist(dog, dog.target) > 300) {
-    dog.target = nearestEnemy(dog);
+  const canTarget = (e) => e.type !== 'vehicle' && e.type !== 'edrone' && e.type !== 'heli';
+  if (!dog.target || dog.target.hp <= 0 || !canTarget(dog.target) || dist(dog, dog.target) > 300) {
+    dog.target = G.enemies.filter(canTarget).reduce((best, e) => {
+      const d = dist(dog, e);
+      return (!best || d < dist(dog, best)) ? e : best;
+    }, null);
   }
   if (dog.target) {
     const a = angle(dog, dog.target);
-    dog.x += Math.cos(a) * dog.speed * dtSec;
-    dog.y += Math.sin(a) * dog.speed * dtSec;
+    const stopDist = dog.r + dog.target.r + 4;
+    const d = dist(dog, dog.target);
+    if (d > stopDist) {
+      dog.x += Math.cos(a) * dog.speed * dtSec;
+      dog.y += Math.sin(a) * dog.speed * dtSec;
+    }
     dog.attackCooldown -= dtSec * 1000;
-    if (dog.attackCooldown <= 0 && dist(dog, dog.target) < dog.r + dog.target.r + 8) {
+    if (dog.attackCooldown <= 0 && d < stopDist + 10) {
       hitEnemy(dog.target, dog.damage);
       dog.attackCooldown = dog.attackRate;
       spawnParticles(G, dog.x, dog.y, '#c82', 5, 20, 80, 150, 300);
