@@ -1217,118 +1217,63 @@ function render() {
 
 // ========== DRAW FUNCTIONS ==========
 
-function drawSoldierTopDown(s, helmetColor, vestColor, vestAccent, skinColor, eyeColor) {
+function drawSoldierTopDown(s, helmetColor, shoulderColor, vestColor, skinColor, eyeColor) {
   const f = s;
 
-  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  // Drop shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
   ctx.beginPath();
-  ctx.ellipse(0, 0, 14*f, 10*f, 0, 0, Math.PI*2);
+  ctx.ellipse(1*f, 1*f, 9*f, 9*f, 0, 0, Math.PI*2);
   ctx.fill();
 
-  ctx.fillStyle = '#111';
+  // Left shoulder
+  ctx.fillStyle = shoulderColor;
   ctx.beginPath();
-  ctx.ellipse(-10*f, -3.5*f, 3.5*f, 2*f, 0, 0, Math.PI*2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(-10*f,  3.5*f, 3.5*f, 2*f, 0, 0, Math.PI*2);
+  ctx.ellipse(-1*f, -8*f, 5*f, 3.5*f, 0.4, 0, Math.PI*2);
   ctx.fill();
 
-  ctx.fillStyle = '#222a20';
+  // Right shoulder
   ctx.beginPath();
-  ctx.ellipse(-6*f, -3.5*f, 3.5*f, 2*f, 0, 0, Math.PI*2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(-6*f,  3.5*f, 3.5*f, 2*f, 0, 0, Math.PI*2);
+  ctx.ellipse(-1*f, 8*f, 5*f, 3.5*f, -0.4, 0, Math.PI*2);
   ctx.fill();
 
-  ctx.fillStyle = vestColor;
+  // Weapon (pointing forward = positive x)
+  ctx.fillStyle = '#1a1a1a';
   ctx.beginPath();
-  ctx.ellipse(0, 0, 6*f, 11*f, 0, 0, Math.PI*2);
+  ctx.roundRect(4*f, -1.4*f, 16*f, 2.8*f, 1);
+  ctx.fill();
+  // Barrel highlight
+  ctx.fillStyle = '#333';
+  ctx.beginPath();
+  ctx.roundRect(13*f, -0.8*f, 7*f, 1.6*f, 1);
+  ctx.fill();
+  // Muzzle
+  ctx.fillStyle = '#555';
+  ctx.beginPath();
+  ctx.arc(20*f, 0, 1.4*f, 0, Math.PI*2);
   ctx.fill();
 
-  ctx.fillStyle = vestAccent;
-  ctx.beginPath();
-  ctx.ellipse(1*f, 0, 4*f, 6*f, 0, 0, Math.PI*2);
-  ctx.fill();
-
-  ctx.strokeStyle = 'rgba(0,0,0,0.4)';
-  ctx.lineWidth = 1.2*f;
-  ctx.beginPath();
-  ctx.moveTo(-3*f, -5*f); ctx.lineTo(3*f, -5*f);
-  ctx.moveTo(-3*f,  5*f); ctx.lineTo(3*f,  5*f);
-  ctx.stroke();
-
-  ctx.fillStyle = vestColor;
-  ctx.beginPath();
-  ctx.ellipse(5*f, -8*f, 5.5*f, 2.5*f, -0.3, 0, Math.PI*2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(5*f,  8*f, 5.5*f, 2.5*f,  0.3, 0, Math.PI*2);
-  ctx.fill();
-
-  ctx.fillStyle = skinColor;
-  ctx.beginPath();
-  ctx.ellipse(8*f, -5*f, 2.5*f, 2*f, -0.3, 0, Math.PI*2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(8*f,  5*f, 2.5*f, 2*f,  0.3, 0, Math.PI*2);
-  ctx.fill();
-
-  ctx.fillStyle = '#2a2a2a';
-  ctx.beginPath();
-  ctx.roundRect(6*f, -1.2*f, 17*f, 2.4*f, 1);
-  ctx.fill();
-  ctx.fillStyle = '#444';
-  ctx.beginPath();
-  ctx.roundRect(14*f, -0.8*f, 9*f, 1.6*f, 1);
-  ctx.fill();
-  ctx.fillStyle = '#666';
-  ctx.beginPath();
-  ctx.arc(23*f, 0, 1.2*f, 0, Math.PI*2);
-  ctx.fill();
-
-  ctx.fillStyle = skinColor;
-  ctx.beginPath();
-  ctx.ellipse(7*f, 0, 2.5*f, 2*f, 0, 0, Math.PI*2);
-  ctx.fill();
-
+  // Helmet base (main dome seen from above)
   ctx.fillStyle = helmetColor;
   ctx.beginPath();
-  ctx.arc(9*f, 0, 7*f, 0, Math.PI*2);
+  ctx.arc(0, 0, 8*f, 0, Math.PI*2);
   ctx.fill();
 
-  const grad = ctx.createRadialGradient(7*f, -2*f, 0.5*f, 9*f, 0, 7*f);
-  grad.addColorStop(0,   'rgba(255,255,255,0.18)');
-  grad.addColorStop(0.5, 'rgba(0,0,0,0)');
-  grad.addColorStop(1,   'rgba(0,0,0,0.45)');
+  // Helmet rim / edge shadow
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.lineWidth = 1.4*f;
+  ctx.beginPath();
+  ctx.arc(0, 0, 8*f, 0, Math.PI*2);
+  ctx.stroke();
+
+  // Helmet gloss highlight
+  const grad = ctx.createRadialGradient(-3*f, -3*f, 0.5*f, 0, 0, 8*f);
+  grad.addColorStop(0,   'rgba(255,255,255,0.22)');
+  grad.addColorStop(0.5, 'rgba(255,255,255,0.04)');
+  grad.addColorStop(1,   'rgba(0,0,0,0.3)');
   ctx.fillStyle = grad;
   ctx.beginPath();
-  ctx.arc(9*f, 0, 7*f, 0, Math.PI*2);
-  ctx.fill();
-
-  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-  ctx.lineWidth = 1.2*f;
-  ctx.beginPath();
-  ctx.arc(9*f, 0, 7*f, 0, Math.PI*2);
-  ctx.stroke();
-
-  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-  ctx.lineWidth = 1.5*f;
-  ctx.beginPath();
-  ctx.moveTo(3*f, 0); ctx.lineTo(15*f, 0);
-  ctx.stroke();
-
-  ctx.fillStyle = skinColor;
-  ctx.beginPath();
-  ctx.ellipse(14*f, 0, 2.5*f, 2*f, 0, 0, Math.PI*2);
-  ctx.fill();
-
-  ctx.fillStyle = eyeColor;
-  ctx.beginPath();
-  ctx.ellipse(14*f, -1*f, 1*f, 0.8*f, 0, 0, Math.PI*2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(14*f,  1*f, 1*f, 0.8*f, 0, 0, Math.PI*2);
+  ctx.arc(0, 0, 8*f, 0, Math.PI*2);
   ctx.fill();
 }
 
