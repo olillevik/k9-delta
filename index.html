@@ -523,10 +523,9 @@ function spawnEnemy(type) {
   } else {
     // Land troops arrive by boat at shoreline
     const angle = rnd(0, Math.PI * 2);
-    // Shore target = water's edge (just outside beach)
-    const dockDist = islandRx + idef.beach + 10;
-    const tx = cx + Math.cos(angle) * dockDist;
-    const ty = cy + Math.sin(angle) * dockDist;
+    // Shore target = water's edge (ellipse-correct per axis)
+    const tx = cx + Math.cos(angle) * (islandRx + idef.beach + 10);
+    const ty = cy + Math.sin(angle) * (islandRy + idef.beach + 10);
     // Boat starts further out at sea
     const bx = cx + Math.cos(angle) * (islandRx + 220);
     const by = cy + Math.sin(angle) * (islandRy + 220);
@@ -722,84 +721,7 @@ function update(dt) {
   for (let i = G.enemies.length - 1; i >= 0; i--) {
     const e = G.enemies[i];
     if (e.hp <= 0) {
-      // Kamikaze drone and heli explode on death too
-  if (e.type === 'bomber') {
-    // Suicide bomber — desperate running figure, orange vest, no weapon
-    ctx.save();
-    const a2 = angle(e, G.player);
-    ctx.rotate(a2);
-
-    // Pulsing warning glow
-    const pulse = 0.5 + 0.5 * Math.sin(G.time * 0.012);
-    ctx.shadowBlur = 10 + pulse * 14;
-    ctx.shadowColor = '#ff4400';
-
-    // Drop shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.beginPath();
-    ctx.ellipse(1, 1, 9, 9, 0, 0, Math.PI*2);
-    ctx.fill();
-
-    // Shoulders (tan/khaki, smaller than soldier)
-    ctx.fillStyle = '#a87040';
-    ctx.shadowBlur = 0;
-    ctx.beginPath();
-    ctx.ellipse(-1, -7, 4, 2.8, 0.4, 0, Math.PI*2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(-1, 7, 4, 2.8, -0.4, 0, Math.PI*2);
-    ctx.fill();
-
-    // Explosive vest (bright orange with straps)
-    ctx.fillStyle = '#cc4400';
-    ctx.beginPath();
-    ctx.arc(0, 0, 7, 0, Math.PI*2);
-    ctx.fill();
-    // Vest straps
-    ctx.strokeStyle = '#ff8800';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(-6, -3); ctx.lineTo(6, -3);
-    ctx.moveTo(-6, 3);  ctx.lineTo(6, 3);
-    ctx.stroke();
-    // TNT blocks on vest
-    ctx.fillStyle = '#ff2200';
-    ctx.fillRect(-4, -5, 3, 3);
-    ctx.fillRect(1,  -5, 3, 3);
-    ctx.fillRect(-4, 2,  3, 3);
-    ctx.fillRect(1,  2,  3, 3);
-
-    // Helmet (dark red)
-    ctx.fillStyle = '#6a0000';
-    ctx.beginPath();
-    ctx.arc(0, 0, 6.5, 0, Math.PI*2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-
-    // Helmet gloss
-    const hgrad = ctx.createRadialGradient(-2.5, -2.5, 0.4, 0, 0, 6.5);
-    hgrad.addColorStop(0, 'rgba(255,100,0,0.25)');
-    hgrad.addColorStop(1, 'rgba(0,0,0,0.35)');
-    ctx.fillStyle = hgrad;
-    ctx.beginPath();
-    ctx.arc(0, 0, 6.5, 0, Math.PI*2);
-    ctx.fill();
-
-    ctx.restore();
-
-    // HP bar
-    ctx.save();
-    ctx.translate(e.x, e.y);
-    const bwb = e.r * 2.4;
-    ctx.fillStyle = '#400'; ctx.fillRect(-bwb/2, -e.r-10, bwb, 5);
-    ctx.fillStyle = '#f60'; ctx.fillRect(-bwb/2, -e.r-10, bwb * Math.max(0, e.hp/e.maxHp), 5);
-    ctx.restore();
-    return;
-  }
-
-  if (e.type === 'edrone') {
+      if (e.type === 'edrone') {
         explodeAt(e.x, e.y, e.explodeDmg, 90, '#f60');
       } else if (e.type === 'heli') {
         explodeAt(e.x, e.y, e.rocketDmg * 0.8, 100, '#f80');
@@ -931,14 +853,13 @@ function update(dt) {
   G.boats = G.boats.filter(b => {
     const p = G.player;
     if (b.state === 'incoming') {
-      // Move toward shore target
       const dx = b.targetX - b.x, dy = b.targetY - b.y;
       const d = Math.sqrt(dx*dx + dy*dy);
-      if (d < 6) {
+      const spd = b.speed * dtSec;
+      if (d <= spd + 2) {
         b.x = b.targetX; b.y = b.targetY;
         b.state = 'docked';
       } else {
-        const spd = b.speed * dtSec;
         b.x += (dx/d) * spd;
         b.y += (dy/d) * spd;
         b.angle = Math.atan2(dy, dx) + Math.PI / 2;
@@ -1578,6 +1499,39 @@ function drawPlayer(p) {
 function drawEnemy(e) {
   ctx.save();
   ctx.translate(e.x, e.y);
+
+  if (e.type === 'bomber') {
+    const a2 = angle(e, G.player);
+    ctx.rotate(a2);
+    const pulse = 0.5 + 0.5 * Math.sin(G.time * 0.012);
+    ctx.shadowBlur = 10 + pulse * 14;
+    ctx.shadowColor = '#ff4400';
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath(); ctx.ellipse(1, 1, 9, 9, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#a87040'; ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.ellipse(-1, -7, 4, 2.8, 0.4, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(-1, 7, 4, 2.8, -0.4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#cc4400';
+    ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#ff8800'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-6,-3); ctx.lineTo(6,-3); ctx.moveTo(-6,3); ctx.lineTo(6,3); ctx.stroke();
+    ctx.fillStyle = '#ff2200';
+    ctx.fillRect(-4,-5,3,3); ctx.fillRect(1,-5,3,3); ctx.fillRect(-4,2,3,3); ctx.fillRect(1,2,3,3);
+    ctx.fillStyle = '#6a0000';
+    ctx.beginPath(); ctx.arc(0, 0, 6.5, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 1.2; ctx.stroke();
+    const hgrad = ctx.createRadialGradient(-2.5,-2.5,0.4,0,0,6.5);
+    hgrad.addColorStop(0,'rgba(255,100,0,0.25)'); hgrad.addColorStop(1,'rgba(0,0,0,0.35)');
+    ctx.fillStyle = hgrad;
+    ctx.beginPath(); ctx.arc(0, 0, 6.5, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+    ctx.save(); ctx.translate(e.x, e.y);
+    const bwb = e.r * 2.4;
+    ctx.fillStyle = '#400'; ctx.fillRect(-bwb/2, -e.r-10, bwb, 5);
+    ctx.fillStyle = '#f60'; ctx.fillRect(-bwb/2, -e.r-10, bwb * Math.max(0, e.hp/e.maxHp), 5);
+    ctx.restore();
+    return;
+  }
 
   if (e.type === 'edrone') {
     drawEnemyDrone(e);
