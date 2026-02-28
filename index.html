@@ -28,6 +28,26 @@
   .shop-item .price { font-size: 12px; color: #ff0; }
   .shop-item .level-bar { height: 4px; background: #333; border-radius: 2px; margin-top: 6px; }
   .shop-item .level-fill { height: 100%; background: #0af; border-radius: 2px; transition: width 0.3s; }
+  /* Weapon row: unlock + expand */
+  .wpn-row { display: flex; gap: 8px; align-items: stretch; margin-bottom: 8px; }
+  .wpn-unlock { flex: 1; background: #111; border: 1px solid #333; border-radius: 6px; padding: 10px 12px; cursor: pointer; pointer-events: all; transition: border-color 0.2s; display: flex; align-items: center; gap: 10px; }
+  .wpn-unlock:hover { border-color: #0af; }
+  .wpn-unlock.owned { border-color: #0f0; }
+  .wpn-unlock.cant-afford { opacity: 0.4; cursor: default; }
+  .wpn-unlock .wpn-name { font-size: 13px; color: #fff; flex: 1; }
+  .wpn-unlock .wpn-price { font-size: 12px; color: #ff0; white-space: nowrap; }
+  .wpn-unlock .wpn-owned-label { font-size: 11px; color: #0f0; }
+  .wpn-expand-btn { background: #111; border: 1px solid #333; border-radius: 6px; padding: 10px 14px; cursor: pointer; pointer-events: all; color: #0af; font-size: 18px; transition: border-color 0.2s, background 0.2s; }
+  .wpn-expand-btn:hover { border-color: #0af; background: #0af2; }
+  .wpn-expand-btn.open { border-color: #0af; background: #0af2; }
+  .wpn-upgrades { display: flex; gap: 8px; margin-bottom: 8px; padding: 8px; background: #0a0a14; border: 1px solid #0af4; border-radius: 6px; }
+  .wpn-upg-btn { flex: 1; background: #111; border: 1px solid #333; border-radius: 6px; padding: 10px; cursor: pointer; pointer-events: all; transition: border-color 0.2s; text-align: center; }
+  .wpn-upg-btn:hover { border-color: #0af; }
+  .wpn-upg-btn.cant-afford { opacity: 0.4; cursor: default; }
+  .wpn-upg-btn .upg-icon { font-size: 18px; }
+  .wpn-upg-btn .upg-name { font-size: 12px; color: #fff; margin: 4px 0 2px; }
+  .wpn-upg-btn .upg-desc { font-size: 10px; color: #888; margin-bottom: 6px; }
+  .wpn-upg-btn .upg-price { font-size: 12px; color: #ff0; }
   #close-shop { display: block; margin: 18px auto 0; padding: 10px 40px; background: #0af; color: #000; border: none; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: bold; letter-spacing: 2px; }
   #close-shop:hover { background: #0df; }
   #game-over { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; z-index: 200; justify-content: center; align-items: center; flex-direction: column; }
@@ -156,11 +176,11 @@ function wpnRateDesc(lvl) {
 // Helper: build per-weapon upgrade entries
 function makeWpnUpgrades(id, name, icon, unlockId, dmgBase, rateBase) {
   return [
-    { id: unlockId + '_dmg', section: name, name: name + ': Skade', icon: '🔥',
+    { id: unlockId + '_dmg', section: name, name: 'Skade', icon: '🔥', wpnUpgrade: true,
       maxLevel: Infinity, baseCost: dmgBase, costScale: 1.35, requires: unlockId,
       desc: (lvl) => wpnDmgDesc(lvl),
       onBuy: (g, lvl) => { if (!g.wpnMults) g.wpnMults = {}; if (!g.wpnMults[id]) g.wpnMults[id] = {dmg:1,rate:1}; g.wpnMults[id].dmg = wpnDmgBonus(lvl); } },
-    { id: unlockId + '_rate', section: name, name: name + ': Ildrate', icon: '⚡',
+    { id: unlockId + '_rate', section: name, name: 'Ildrate', icon: '⚡', wpnUpgrade: true,
       maxLevel: Infinity, baseCost: rateBase, costScale: 1.35, requires: unlockId,
       desc: (lvl) => wpnRateDesc(lvl),
       onBuy: (g, lvl) => { if (!g.wpnMults) g.wpnMults = {}; if (!g.wpnMults[id]) g.wpnMults[id] = {dmg:1,rate:1}; g.wpnMults[id].rate = wpnRateBonus(lvl); } },
@@ -1733,25 +1753,135 @@ function closeShop() {
   buildWeaponBar();
 }
 
-function renderShop() {
+function renderShop(expandedWeaponSection) {
   document.getElementById('shop-coins-val').textContent = G.coins;
   const content = document.getElementById('shop-content');
   content.innerHTML = '';
 
-  const sections = {};
+  // First pass: collect all weapon sections (those with wpnUpgrade entries)
+  const weaponSections = {}; // section -> { unlock, dmg, rate }
   UPGRADES.forEach(upg => {
-    if (!sections[upg.section]) sections[upg.section] = [];
-    sections[upg.section].push(upg);
+    if (upg.wpnUpgrade) {
+      if (!weaponSections[upg.section]) weaponSections[upg.section] = {};
+      const key = upg.id.endsWith('_dmg') ? 'dmg' : 'rate';
+      weaponSections[upg.section][key] = upg;
+    }
+  });
+  // Second pass: attach unlock entries to weapon sections
+  const otherSections = {};
+  UPGRADES.forEach(upg => {
+    if (upg.wpnUpgrade) return; // already handled
+    if (weaponSections[upg.section]) {
+      if (!weaponSections[upg.section].unlock) weaponSections[upg.section].unlock = upg;
+    } else {
+      if (!otherSections[upg.section]) otherSections[upg.section] = [];
+      otherSections[upg.section].push(upg);
+    }
   });
 
-  Object.keys(sections).forEach(section => {
+  // ---- Weapons section ----
+  const wpnSecEl = document.createElement('div');
+  wpnSecEl.className = 'shop-section';
+  wpnSecEl.innerHTML = '<h3>VÅPEN</h3>';
+
+  Object.keys(weaponSections).forEach(secName => {
+    const entry = weaponSections[secName];
+    const unlock = entry.unlock;
+    const isOwned = !unlock || (G.upgradeLevels[unlock.id] || 0) >= 1;
+    const isExpanded = expandedWeaponSection === secName;
+
+    const rowEl = document.createElement('div');
+    rowEl.className = 'wpn-row';
+
+    // Left: weapon name / unlock button
+    const unlockEl = document.createElement('div');
+    if (isOwned) {
+      const dmgLvl = entry.dmg ? (G.upgradeLevels[entry.dmg.id] || 0) : 0;
+      const rateLvl = entry.rate ? (G.upgradeLevels[entry.rate.id] || 0) : 0;
+      const lvlStr = (dmgLvl > 0 || rateLvl > 0)
+        ? ' <span style="color:#0af;font-size:10px">Skade Lv.' + dmgLvl + ' | Ildrate Lv.' + rateLvl + '</span>'
+        : '';
+      unlockEl.className = 'wpn-unlock owned';
+      unlockEl.innerHTML =
+        '<span style="font-size:20px">' + (unlock ? unlock.icon : '🔫') + '</span>' +
+        '<span class="wpn-name">' + secName + lvlStr + '</span>' +
+        '<span class="wpn-owned-label">EID</span>';
+    } else {
+      const cost = upgradeCost(unlock, 0);
+      const canAfford = G.coins >= cost;
+      unlockEl.className = 'wpn-unlock' + (!canAfford ? ' cant-afford' : '');
+      unlockEl.innerHTML =
+        '<span style="font-size:20px">' + unlock.icon + '</span>' +
+        '<span class="wpn-name">' + secName + '</span>' +
+        '<span class="wpn-price">' + cost + ' coins</span>';
+      if (canAfford) {
+        unlockEl.addEventListener('click', () => {
+          G.coins -= cost;
+          G.upgradeLevels[unlock.id] = 1;
+          unlock.onBuy(G, 1);
+          renderShop(secName);
+          buildWeaponBar();
+        });
+      }
+    }
+    rowEl.appendChild(unlockEl);
+
+    // Right: expand button (only if owned and has upgrades)
+    if (isOwned && (entry.dmg || entry.rate)) {
+      const expandBtn = document.createElement('div');
+      expandBtn.className = 'wpn-expand-btn' + (isExpanded ? ' open' : '');
+      expandBtn.textContent = isExpanded ? '▲' : '▼';
+      expandBtn.addEventListener('click', () => {
+        renderShop(isExpanded ? null : secName);
+      });
+      rowEl.appendChild(expandBtn);
+    }
+
+    wpnSecEl.appendChild(rowEl);
+
+    // Upgrade sub-panel (shown when expanded)
+    if (isOwned && isExpanded && (entry.dmg || entry.rate)) {
+      const upgPanel = document.createElement('div');
+      upgPanel.className = 'wpn-upgrades';
+
+      [entry.dmg, entry.rate].filter(Boolean).forEach(upg => {
+        const lvl = G.upgradeLevels[upg.id] || 0;
+        const cost = upgradeCost(upg, lvl);
+        const canAfford = G.coins >= cost;
+        const btn = document.createElement('div');
+        btn.className = 'wpn-upg-btn' + (!canAfford ? ' cant-afford' : '');
+        btn.innerHTML =
+          '<div class="upg-icon">' + upg.icon + '</div>' +
+          '<div class="upg-name">' + upg.name + (lvl > 0 ? ' <span style="color:#0af;font-size:10px">Lv.' + lvl + '</span>' : '') + '</div>' +
+          '<div class="upg-desc">' + upg.desc(lvl) + '</div>' +
+          '<div class="upg-price">' + cost + ' coins</div>';
+        if (canAfford) {
+          btn.addEventListener('click', () => {
+            G.coins -= cost;
+            const newLvl = lvl + 1;
+            G.upgradeLevels[upg.id] = newLvl;
+            upg.onBuy(G, newLvl);
+            renderShop(secName);
+          });
+        }
+        upgPanel.appendChild(btn);
+      });
+
+      wpnSecEl.appendChild(upgPanel);
+    }
+  });
+
+  content.appendChild(wpnSecEl);
+
+  // ---- Other sections (Rustning, Hunder, Drone osv) ----
+  Object.keys(otherSections).forEach(section => {
     const secEl = document.createElement('div');
     secEl.className = 'shop-section';
     secEl.innerHTML = '<h3>' + section + '</h3>';
     const grid = document.createElement('div');
     grid.className = 'shop-items';
 
-    sections[section].forEach(upg => {
+    otherSections[section].forEach(upg => {
       const level = G.upgradeLevels[upg.id] || 0;
       const maxReached = upg.maxLevel !== Infinity && level >= upg.maxLevel;
       const cost = upgradeCost(upg, level);
@@ -1765,13 +1895,9 @@ function renderShop() {
         + (!maxReached && (!canAfford || !reqMet) ? ' cant-afford' : '');
 
       let priceLabel;
-      if (maxReached) {
-        priceLabel = 'MAX';
-      } else if (!reqMet) {
-        priceLabel = 'Krev: ' + upg.requires;
-      } else {
-        priceLabel = cost + ' coins';
-      }
+      if (maxReached)      priceLabel = 'MAX';
+      else if (!reqMet)    priceLabel = 'Krev: ' + upg.requires;
+      else                 priceLabel = cost + ' coins';
 
       const levelTag = level > 0 ? ' <span style="color:#0af;font-size:10px">Lv.' + level + '</span>' : '';
       const barHtml = (upg.maxLevel !== Infinity && upg.maxLevel > 1)
