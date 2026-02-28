@@ -353,6 +353,7 @@ function initGame() {
     camY: 0,
     mapW: 3200,
     mapH: 2400,
+    boats: [],
   };
 
   G.player.x = G.mapW / 2;
@@ -395,10 +396,14 @@ function createDog(g, offsetY) {
 }
 
 function createDrone(g, orbitOffset, orbitRadius) {
+  const r = orbitRadius || 55;
+  // Inner orbits faster, outer orbits slower
+  const orbitSpeed = 2.2 - (r - 55) * 0.008;
   return {
     x: g.player.x, y: g.player.y - 40,
     r: 9, hp: 80, maxHp: 80,
-    orbitAngle: orbitOffset || 0, orbitRadius: orbitRadius || 55,
+    orbitAngle: orbitOffset || 0, orbitRadius: r,
+    orbitSpeed: Math.max(0.8, orbitSpeed),
     damage: 20, fireRate: 600,
     fireTimer: 0, color: COLORS.drone,
   };
@@ -469,20 +474,38 @@ function buildWaveQueue() {
 }
 
 function spawnEnemy(type) {
-  const p = G.player;
-  const side = rndInt(0, 3);
-  const margin = 60;
-  let x, y;
-  const vw = canvas.width, vh = canvas.height;
-  if (side === 0) { x = p.x + rnd(-vw * 0.7, vw * 0.7); y = p.y - vh * 0.6 - margin; }
-  else if (side === 1) { x = p.x + rnd(-vw * 0.7, vw * 0.7); y = p.y + vh * 0.6 + margin; }
-  else if (side === 2) { x = p.x - vw * 0.6 - margin; y = p.y + rnd(-vh * 0.7, vh * 0.7); }
-  else { x = p.x + vw * 0.6 + margin; y = p.y + rnd(-vh * 0.7, vh * 0.7); }
-  x = Math.max(20, Math.min(G.mapW - 20, x));
-  y = Math.max(20, Math.min(G.mapH - 20, y));
-
+  const cx = G.mapW / 2, cy = G.mapH / 2;
+  const islandRx = G.mapW * 0.36, islandRy = G.mapH * 0.38;
   const hpScale  = Math.pow(1.07, G.wave - 1);
   const spdScale = 1 + (G.wave - 1) * 0.03;
+
+  const isAerial = type === 'edrone' || type === 'heli';
+
+  let x, y;
+  if (isAerial) {
+    // Fly in from screen edges
+    const p = G.player;
+    const side = rndInt(0, 3);
+    const vw = canvas.width, vh = canvas.height;
+    if (side === 0) { x = p.x + rnd(-vw * 0.7, vw * 0.7); y = p.y - vh * 0.6 - 80; }
+    else if (side === 1) { x = p.x + rnd(-vw * 0.7, vw * 0.7); y = p.y + vh * 0.6 + 80; }
+    else if (side === 2) { x = p.x - vw * 0.6 - 80; y = p.y + rnd(-vh * 0.7, vh * 0.7); }
+    else { x = p.x + vw * 0.6 + 80; y = p.y + rnd(-vh * 0.7, vh * 0.7); }
+    x = Math.max(20, Math.min(G.mapW - 20, x));
+    y = Math.max(20, Math.min(G.mapH - 20, y));
+  } else {
+    // Land troops arrive by boat at shoreline
+    const angle = rnd(0, Math.PI * 2);
+    // Place boat just outside island edge
+    const bx = cx + Math.cos(angle) * (islandRx + 80);
+    const by = cy + Math.sin(angle) * (islandRy + 80);
+    // Troop lands at island edge
+    x = cx + Math.cos(angle) * (islandRx - 20);
+    y = cy + Math.sin(angle) * (islandRy - 20);
+    // Spawn a visual boat that fades out
+    G.boats.push({ x: bx, y: by, angle: angle + Math.PI / 2, life: 3000 });
+  }
+
   if (type === 'soldier') {
     G.enemies.push({ type:'soldier', x, y, r:11, hp: 40*hpScale, maxHp:40*hpScale, speed:(70+G.wave*1.5)*spdScale, damage:10+G.wave*0.4, fireRate:1400, fireTimer:rnd(0,1400), range:280, color:COLORS.enemySoldier, score:10, coins:rndInt(3,7) });
   } else if (type === 'heavy') {
@@ -490,10 +513,8 @@ function spawnEnemy(type) {
   } else if (type === 'vehicle') {
     G.enemies.push({ type:'vehicle', x, y, r:22, hp: 300*hpScale, maxHp:300*hpScale, speed:(80+G.wave*2)*spdScale, damage:25+G.wave*1.0, fireRate:1800, fireTimer:rnd(0,1800), range:350, color:COLORS.enemyVehicle, score:80, coins:rndInt(30,49) });
   } else if (type === 'edrone') {
-    // Kamikaze drone — flies directly at player and explodes on contact
     G.enemies.push({ type:'edrone', x, y, r:10, hp: 25*hpScale, maxHp:25*hpScale, speed:(140+G.wave*3)*spdScale, damage:0, fireRate:99999, fireTimer:0, range:0, color:COLORS.enemyDrone, score:25, coins:rndInt(6,12), explodeDmg:35+G.wave*1.5, spinAngle:0 });
   } else if (type === 'heli') {
-    // Helicopter — hovers at medium range, fires proximity rockets
     G.enemies.push({ type:'heli', x, y, r:20, hp: 220*hpScale, maxHp:220*hpScale, speed:(60+G.wave*1.5)*spdScale, damage:0, fireRate:2200, fireTimer:rnd(0,2200), range:400, color:COLORS.enemyHeli, score:60, coins:rndInt(21,34), rocketDmg:28+G.wave*1.2, rotorAngle:0 });
   }
 }
@@ -529,8 +550,23 @@ function update(dt) {
   if (keys['d'] || keys['arrowright']) dx += 1;
   const dlen = Math.hypot(dx, dy);
   if (dlen > 1) { dx /= dlen; dy /= dlen; }
-  p.x = Math.max(p.r, Math.min(G.mapW - p.r, p.x + dx * p.speed * dtSec));
-  p.y = Math.max(p.r, Math.min(G.mapH - p.r, p.y + dy * p.speed * dtSec));
+  const nx = p.x + dx * p.speed * dtSec;
+  const ny = p.y + dy * p.speed * dtSec;
+  // Constrain player to island ellipse
+  const icx = G.mapW / 2, icy = G.mapH / 2;
+  const irx = G.mapW * 0.36 - p.r, iry = G.mapH * 0.38 - p.r;
+  const normX = (nx - icx) / irx, normY = (ny - icy) / iry;
+  if (normX * normX + normY * normY <= 1) {
+    p.x = nx; p.y = ny;
+  } else {
+    // Slide along ellipse edge
+    const onlyX = (p.x + dx * p.speed * dtSec - icx) / irx;
+    const onlyY = (p.y - icy) / iry;
+    if (onlyX * onlyX + onlyY * onlyY <= 1) p.x = p.x + dx * p.speed * dtSec;
+    const onlyX2 = (p.x - icx) / irx;
+    const onlyY2 = (p.y + dy * p.speed * dtSec - icy) / iry;
+    if (onlyX2 * onlyX2 + onlyY2 * onlyY2 <= 1) p.y = p.y + dy * p.speed * dtSec;
+  }
 
   // Track movement direction
   if (dx !== 0 || dy !== 0) p.moveAngle = Math.atan2(dy, dx);
@@ -753,6 +789,8 @@ function update(dt) {
     return p.life > 0;
   });
 
+  G.boats = G.boats.filter(b => { b.life -= dt; return b.life > 0; });
+
   G.floatTexts = G.floatTexts.filter(t => {
     t.y -= 28 * dtSec;
     t.life -= dt;
@@ -893,15 +931,22 @@ function updateDog(dog, dtSec) {
     const dx = targetX - dog.x;
     const dy = targetY - dog.y;
     const d = Math.sqrt(dx*dx + dy*dy);
-    if (d > 15) {
+    if (d > 40) {
+      // Full speed when far away
       dog.x += (dx/d) * dog.speed * dtSec;
       dog.y += (dy/d) * dog.speed * dtSec;
+    } else if (d > 6) {
+      // Slow lerp when close, prevents jitter
+      const lerpSpeed = dog.speed * (d / 40);
+      dog.x += (dx/d) * lerpSpeed * dtSec;
+      dog.y += (dy/d) * lerpSpeed * dtSec;
     }
+    // Dead zone: d <= 6, don't move at all
   }
 }
 
 function updateDrone(drone, dtSec) {
-  drone.orbitAngle += dtSec * 1.5;
+  drone.orbitAngle += dtSec * (drone.orbitSpeed || 1.5);
   drone.x = G.player.x + Math.cos(drone.orbitAngle) * drone.orbitRadius;
   drone.y = G.player.y + Math.sin(drone.orbitAngle) * drone.orbitRadius;
   drone.fireTimer -= dtSec * 1000;
@@ -920,22 +965,78 @@ function render() {
   ctx.save();
   ctx.translate(-G.camX, -G.camY);
 
-  // Ground tiles
-  const tileW = 80, tileH = 80;
-  const startX = Math.floor(G.camX / tileW) * tileW;
-  const startY = Math.floor(G.camY / tileH) * tileH;
-  for (let tx = startX; tx < G.camX + canvas.width + tileW; tx += tileW) {
-    for (let ty = startY; ty < G.camY + canvas.height + tileH; ty += tileH) {
-      const ix = Math.floor(tx / tileW);
-      const iy = Math.floor(ty / tileH);
-      ctx.fillStyle = (ix + iy) % 2 === 0 ? '#141410' : '#111109';
-      ctx.fillRect(tx, ty, tileW, tileH);
-    }
-  }
-  ctx.strokeStyle = '#f004';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(0, 0, G.mapW, G.mapH);
+  const cx = G.mapW / 2, cy = G.mapH / 2;
+  const islandRx = G.mapW * 0.36, islandRy = G.mapH * 0.38;
 
+  // Ocean background
+  ctx.fillStyle = '#0a2a4a';
+  ctx.fillRect(0, 0, G.mapW, G.mapH);
+
+  // Animated wave shimmer
+  const wt = G.time * 0.0008;
+  for (let i = 0; i < 18; i++) {
+    const wx = (i * 197 + Math.sin(wt + i * 0.7) * 80) % G.mapW;
+    const wy = (i * 139 + Math.cos(wt * 0.6 + i * 1.1) * 60) % G.mapH;
+    const wr = 60 + Math.sin(wt * 1.3 + i) * 20;
+    ctx.globalAlpha = 0.06 + Math.sin(wt + i) * 0.03;
+    ctx.fillStyle = '#5af';
+    ctx.beginPath();
+    ctx.ellipse(wx, wy, wr, wr * 0.3, wt * 0.2 + i, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Island sandy beach ring
+  ctx.fillStyle = '#c8a86e';
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, islandRx + 55, islandRy + 55, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Island grass
+  ctx.fillStyle = '#3a6b2a';
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, islandRx, islandRy, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Grass texture patches
+  for (let i = 0; i < 40; i++) {
+    const px = cx + Math.cos(i * 2.4) * islandRx * (0.2 + (i % 7) * 0.1);
+    const py = cy + Math.sin(i * 1.9) * islandRy * (0.2 + (i % 5) * 0.12);
+    ctx.fillStyle = i % 3 === 0 ? '#2d5520' : '#447733';
+    ctx.beginPath();
+    ctx.ellipse(px, py, 18 + (i % 4) * 8, 12 + (i % 3) * 6, i * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Shoreline foam
+  ctx.strokeStyle = 'rgba(200,220,255,0.25)';
+  ctx.lineWidth = 8;
+  ctx.setLineDash([30, 20]);
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, islandRx + 58, islandRy + 58, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Boats (visual objects stored in G.boats)
+  if (G.boats) {
+    G.boats.forEach(boat => {
+      ctx.save();
+      ctx.translate(boat.x, boat.y);
+      ctx.rotate(boat.angle);
+      ctx.fillStyle = '#6b4226';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 28, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#8b5a3c';
+      ctx.fillRect(-12, -14, 8, 14);
+      ctx.fillStyle = 'rgba(200,200,200,0.7)';
+      ctx.beginPath();
+      ctx.moveTo(-8, -14); ctx.lineTo(10, -6); ctx.lineTo(-8, -2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    });
+  }
   // Particles
   G.particles.forEach(p => {
     const alpha = p.life / 600;
