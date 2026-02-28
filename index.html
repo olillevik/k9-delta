@@ -72,12 +72,13 @@
 <div id="ui">
   <div id="hud">
     <div id="hud-hp">HP: <span id="hp-val">100</span></div>
-    <div id="hud-coins">COINS: <span id="coins-val">0</span></div>
+    <div id="hud-coins">MYNTER: <span id="coins-val">0</span></div>
     <div id="hud-score">SCORE: <span id="score-val">0</span></div>
     <div id="hud-kills">KILLS: <span id="kills-val">0</span></div>
   </div>
   <div id="hud-right">
     <div>WAVE: <span id="wave-val">0</span></div>
+    <div id="island-val"></div>
     <div id="wave-status"></div>
   </div>
   <div id="wave-banner"></div>
@@ -90,7 +91,7 @@
 <div id="shop-overlay">
   <div id="shop-box">
     <h2>SUPPLY DROP</h2>
-    <div id="shop-coins">COINS: <span id="shop-coins-val">0</span></div>
+    <div id="shop-coins">MYNTER: <span id="shop-coins-val">0</span></div>
     <div id="shop-content"></div>
     <button id="close-shop" onclick="closeShop()">BACK TO BATTLE [E]</button>
   </div>
@@ -482,12 +483,15 @@ function buildWaveQueue() {
   const eDroneCount  = n >= 4 ? Math.floor((n - 3) * 0.8 + (n - 3) * (n - 3) * 0.03) : 0;
   // Helicopters appear from wave 7
   const heliCount    = n >= 7 ? Math.floor((n - 6) * 0.5 + (n - 6) * (n - 6) * 0.02) : 0;
+  // Suicide bombers appear from wave 3
+  const bomberCount  = n >= 3 ? Math.floor((n - 2) * 0.6 + (n - 2) * (n - 2) * 0.02) : 0;
 
   for (let i = 0; i < soldierCount; i++) queue.push({ type: 'soldier', delay: i * 350 });
   for (let i = 0; i < heavyCount;   i++) queue.push({ type: 'heavy',   delay: 600 + i * 500 });
   for (let i = 0; i < vehicleCount; i++) queue.push({ type: 'vehicle', delay: 1000 + i * 800 });
   for (let i = 0; i < eDroneCount;  i++) queue.push({ type: 'edrone',  delay: 400 + i * 600 });
   for (let i = 0; i < heliCount;    i++) queue.push({ type: 'heli',    delay: 800 + i * 900 });
+  for (let i = 0; i < bomberCount;  i++) queue.push({ type: 'bomber',  delay: 200 + i * 400 });
 
   queue.sort((a, b) => a.delay - b.delay);
   G.waveSpawnQueue = queue;
@@ -519,14 +523,27 @@ function spawnEnemy(type) {
   } else {
     // Land troops arrive by boat at shoreline
     const angle = rnd(0, Math.PI * 2);
-    // Place boat just outside island edge
-    const bx = cx + Math.cos(angle) * (islandRx + 80);
-    const by = cy + Math.sin(angle) * (islandRy + 80);
+    // Shore target (where boat docks)
+    const tx = cx + Math.cos(angle) * (islandRx + 18);
+    const ty = cy + Math.sin(angle) * (islandRy + 18);
+    // Boat starts further out at sea
+    const bx = cx + Math.cos(angle) * (islandRx + 220);
+    const by = cy + Math.sin(angle) * (islandRy + 220);
     // Troop lands at island edge
     x = cx + Math.cos(angle) * (islandRx - 20);
     y = cy + Math.sin(angle) * (islandRy - 20);
-    // Spawn a visual boat that fades out
-    G.boats.push({ x: bx, y: by, angle: angle + Math.PI / 2, life: 3000 });
+    // Spawn boat with state machine
+    G.boats.push({
+      x: bx, y: by,
+      angle: angle + Math.PI / 2,
+      targetX: tx, targetY: ty,
+      departX: bx, departY: by,
+      speed: 55,
+      state: 'incoming',   // incoming → docked → leaving
+      dockedTimer: 2200,   // ms to wait at shore
+      fireTimer: rnd(800, 1600),
+      alpha: 1,
+    });
   }
 
   if (type === 'soldier') {
@@ -539,6 +556,8 @@ function spawnEnemy(type) {
     G.enemies.push({ type:'edrone', x, y, r:10, hp: 25*hpScale, maxHp:25*hpScale, speed:(140+G.wave*3)*spdScale, damage:0, fireRate:99999, fireTimer:0, range:0, color:COLORS.enemyDrone, score:25, coins:rndInt(6,12), explodeDmg:35+G.wave*1.5, spinAngle:0 });
   } else if (type === 'heli') {
     G.enemies.push({ type:'heli', x, y, r:20, hp: 220*hpScale, maxHp:220*hpScale, speed:(60+G.wave*1.5)*spdScale, damage:0, fireRate:2200, fireTimer:rnd(0,2200), range:400, color:COLORS.enemyHeli, score:60, coins:rndInt(21,34), rocketDmg:28+G.wave*1.2, rotorAngle:0 });
+  } else if (type === 'bomber') {
+    G.enemies.push({ type:'bomber', x, y, r:9, hp: 22*hpScale, maxHp:22*hpScale, speed:(160+G.wave*4)*spdScale, damage:0, fireRate:99999, fireTimer:0, range:0, color:'#ff6600', score:20, coins:rndInt(4,8), explodeDmg:55+G.wave*2.5, explodeRadius:80, spinAngle:0 });
   }
 }
 
@@ -703,10 +722,88 @@ function update(dt) {
     const e = G.enemies[i];
     if (e.hp <= 0) {
       // Kamikaze drone and heli explode on death too
-      if (e.type === 'edrone') {
+  if (e.type === 'bomber') {
+    // Suicide bomber — desperate running figure, orange vest, no weapon
+    ctx.save();
+    const a2 = angle(e, G.player);
+    ctx.rotate(a2);
+
+    // Pulsing warning glow
+    const pulse = 0.5 + 0.5 * Math.sin(G.time * 0.012);
+    ctx.shadowBlur = 10 + pulse * 14;
+    ctx.shadowColor = '#ff4400';
+
+    // Drop shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(1, 1, 9, 9, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // Shoulders (tan/khaki, smaller than soldier)
+    ctx.fillStyle = '#a87040';
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.ellipse(-1, -7, 4, 2.8, 0.4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(-1, 7, 4, 2.8, -0.4, 0, Math.PI*2);
+    ctx.fill();
+
+    // Explosive vest (bright orange with straps)
+    ctx.fillStyle = '#cc4400';
+    ctx.beginPath();
+    ctx.arc(0, 0, 7, 0, Math.PI*2);
+    ctx.fill();
+    // Vest straps
+    ctx.strokeStyle = '#ff8800';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-6, -3); ctx.lineTo(6, -3);
+    ctx.moveTo(-6, 3);  ctx.lineTo(6, 3);
+    ctx.stroke();
+    // TNT blocks on vest
+    ctx.fillStyle = '#ff2200';
+    ctx.fillRect(-4, -5, 3, 3);
+    ctx.fillRect(1,  -5, 3, 3);
+    ctx.fillRect(-4, 2,  3, 3);
+    ctx.fillRect(1,  2,  3, 3);
+
+    // Helmet (dark red)
+    ctx.fillStyle = '#6a0000';
+    ctx.beginPath();
+    ctx.arc(0, 0, 6.5, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Helmet gloss
+    const hgrad = ctx.createRadialGradient(-2.5, -2.5, 0.4, 0, 0, 6.5);
+    hgrad.addColorStop(0, 'rgba(255,100,0,0.25)');
+    hgrad.addColorStop(1, 'rgba(0,0,0,0.35)');
+    ctx.fillStyle = hgrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, 6.5, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // HP bar
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    const bwb = e.r * 2.4;
+    ctx.fillStyle = '#400'; ctx.fillRect(-bwb/2, -e.r-10, bwb, 5);
+    ctx.fillStyle = '#f60'; ctx.fillRect(-bwb/2, -e.r-10, bwb * Math.max(0, e.hp/e.maxHp), 5);
+    ctx.restore();
+    return;
+  }
+
+  if (e.type === 'edrone') {
         explodeAt(e.x, e.y, e.explodeDmg, 90, '#f60');
       } else if (e.type === 'heli') {
         explodeAt(e.x, e.y, e.rocketDmg * 0.8, 100, '#f80');
+      } else if (e.type === 'bomber') {
+        explodeAt(e.x, e.y, e.explodeDmg, e.explodeRadius, '#ff6600');
       }
       killEnemy(e, i);
       continue;
@@ -723,6 +820,21 @@ function update(dt) {
       if (p.invincibleTimer <= 0 && dist(e, p) < e.r + p.r + 4) {
         explodeAt(e.x, e.y, e.explodeDmg, 90, '#f60');
         e.hp = 0; // will be cleaned up next frame
+      }
+      continue;
+    }
+
+    // --- Suicide bomber ---
+    if (e.type === 'bomber') {
+      e.spinAngle += dtSec * 10;
+      const a = angle(e, p);
+      e.x += Math.cos(a) * e.speed * dtSec;
+      e.y += Math.sin(a) * e.speed * dtSec;
+      e.x = Math.max(e.r, Math.min(G.mapW - e.r, e.x));
+      e.y = Math.max(e.r, Math.min(G.mapH - e.r, e.y));
+      if (p.invincibleTimer <= 0 && dist(e, p) < e.r + p.r + 6) {
+        explodeAt(e.x, e.y, e.explodeDmg, e.explodeRadius, '#ff6600');
+        e.hp = 0;
       }
       continue;
     }
@@ -815,7 +927,54 @@ function update(dt) {
     return p.life > 0;
   });
 
-  G.boats = G.boats.filter(b => { b.life -= dt; return b.life > 0; });
+  G.boats = G.boats.filter(b => {
+    const p = G.player;
+    if (b.state === 'incoming') {
+      // Move toward shore target
+      const dx = b.targetX - b.x, dy = b.targetY - b.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < 6) {
+        b.x = b.targetX; b.y = b.targetY;
+        b.state = 'docked';
+      } else {
+        const spd = b.speed * dtSec;
+        b.x += (dx/d) * spd;
+        b.y += (dy/d) * spd;
+        b.angle = Math.atan2(dy, dx) + Math.PI / 2;
+      }
+    } else if (b.state === 'docked') {
+      b.dockedTimer -= dt;
+      // Shoot rockets at player while docked
+      b.fireTimer -= dt;
+      if (b.fireTimer <= 0 && dist(b, p) < 420) {
+        const ang = Math.atan2(p.y - b.y, p.x - b.x) + (Math.random()-0.5)*0.22;
+        const sp = 230;
+        G.enemyBullets.push({
+          x: b.x, y: b.y,
+          vx: Math.cos(ang)*sp, vy: Math.sin(ang)*sp,
+          damage: 18, r: 6, life: 2200,
+          color: '#f80', proxDmg: 18, proxRadius: 90,
+          isRocket: true,
+        });
+        b.fireTimer = rnd(1800, 2800);
+      }
+      if (b.dockedTimer <= 0) {
+        b.state = 'leaving';
+      }
+    } else if (b.state === 'leaving') {
+      // Move back out to sea
+      const dx = b.departX - b.x, dy = b.departY - b.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < 8) return false; // gone
+      const spd = b.speed * 1.3 * dtSec;
+      b.x += (dx/d) * spd;
+      b.y += (dy/d) * spd;
+      b.angle = Math.atan2(dy, dx) + Math.PI / 2;
+      // Fade out as it leaves
+      b.alpha = Math.min(1, d / 80);
+    }
+    return true;
+  });
 
   G.floatTexts = G.floatTexts.filter(t => {
     t.y -= 28 * dtSec;
@@ -837,6 +996,7 @@ function update(dt) {
     cs += 'Drone: aktiv';
   }
   document.getElementById('companion-status').textContent = cs;
+  document.getElementById('island-val').textContent = ISLAND_DEFS[G.islandIdx].name;
 }
 
 function getCurrentWeapon() {
@@ -1000,19 +1160,45 @@ function render() {
   ctx.fillStyle = '#0a2a4a';
   ctx.fillRect(0, 0, G.mapW, G.mapH);
 
-  // Animated wave shimmer
-  const wt = G.time * 0.0008;
-  for (let i = 0; i < 18; i++) {
-    const wx = (i * 197 + Math.sin(wt + i * 0.7) * 80) % G.mapW;
-    const wy = (i * 139 + Math.cos(wt * 0.6 + i * 1.1) * 60) % G.mapH;
-    const wr = 60 + Math.sin(wt * 1.3 + i) * 20;
-    ctx.globalAlpha = 0.06 + Math.sin(wt + i) * 0.03;
-    ctx.fillStyle = '#5af';
-    ctx.beginPath();
-    ctx.ellipse(wx, wy, wr, wr * 0.3, wt * 0.2 + i, 0, Math.PI * 2);
-    ctx.fill();
+  // Animated ocean waves — rolling sinusoidal lines
+  {
+    const wt = G.time * 0.00045;
+    const rowSpacing = 38;
+    const rows = Math.ceil(G.mapH / rowSpacing) + 2;
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = 'round';
+    for (let r = 0; r < rows; r++) {
+      // Each row scrolls horizontally at a slightly different speed
+      const rowPhase = r * 1.7;
+      const scrollX = ((wt * 60 * (1 + r % 3 * 0.15)) % G.mapW);
+      const baseY = r * rowSpacing - (wt * 18 % rowSpacing);
+      // Vary opacity and amplitude per row for depth effect
+      const alpha = 0.055 + (r % 5) * 0.012;
+      const amp = 5 + (r % 4) * 2.5;
+      const freq = 0.012 + (r % 3) * 0.004;
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = r % 2 === 0 ? '#7bd4ff' : '#4aaeee';
+      ctx.beginPath();
+      // Draw two wavelengths wide so scrolling is seamless
+      for (let wx = -G.mapW; wx <= G.mapW * 2; wx += 6) {
+        const wy = baseY + Math.sin((wx + scrollX) * freq + rowPhase) * amp
+                        + Math.sin((wx + scrollX) * freq * 0.47 + rowPhase * 1.3) * amp * 0.4;
+        if (wx === -G.mapW) ctx.moveTo(wx, wy);
+        else ctx.lineTo(wx, wy);
+      }
+      ctx.stroke();
+      // Small crest highlights every ~180px along the wave
+      ctx.fillStyle = '#beeeff';
+      ctx.globalAlpha = alpha * 0.7;
+      for (let wx = -G.mapW + (r * 53 % 180); wx < G.mapW * 2; wx += 180) {
+        const wy = baseY + Math.sin((wx + scrollX) * freq + rowPhase) * amp;
+        ctx.beginPath();
+        ctx.ellipse(wx, wy, 9 + (r % 3) * 3, 2, Math.sin(rowPhase) * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
   }
-  ctx.globalAlpha = 1;
 
   // Island sandy beach ring
   ctx.fillStyle = idef.sand;
@@ -1046,23 +1232,120 @@ function render() {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // Boats (visual objects stored in G.boats)
+  // Boats
   if (G.boats) {
     G.boats.forEach(boat => {
       ctx.save();
+      ctx.globalAlpha = boat.alpha !== undefined ? boat.alpha : 1;
       ctx.translate(boat.x, boat.y);
       ctx.rotate(boat.angle);
-      ctx.fillStyle = '#6b4226';
+
+      // Wake / bow wave (only when moving)
+      if (boat.state !== 'docked') {
+        ctx.strokeStyle = 'rgba(180,230,255,0.35)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, -28); ctx.lineTo(-22, 18); ctx.moveTo(0, -28); ctx.lineTo(22, 18);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(180,230,255,0.18)';
+        ctx.beginPath();
+        ctx.moveTo(0, -28); ctx.lineTo(-36, 28); ctx.moveTo(0, -28); ctx.lineTo(36, 28);
+        ctx.stroke();
+      }
+
+      // Hull shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
       ctx.beginPath();
-      ctx.ellipse(0, 0, 28, 10, 0, 0, Math.PI * 2);
+      ctx.ellipse(2, 2, 18, 34, 0, 0, Math.PI*2);
       ctx.fill();
-      ctx.fillStyle = '#8b5a3c';
-      ctx.fillRect(-12, -14, 8, 14);
-      ctx.fillStyle = 'rgba(200,200,200,0.7)';
+
+      // Hull outer — dark military grey-green
+      ctx.fillStyle = '#3a4a38';
       ctx.beginPath();
-      ctx.moveTo(-8, -14); ctx.lineTo(10, -6); ctx.lineTo(-8, -2);
+      ctx.moveTo(0, -34);
+      ctx.bezierCurveTo(14, -20, 16, 10, 12, 34);
+      ctx.lineTo(-12, 34);
+      ctx.bezierCurveTo(-16, 10, -14, -20, 0, -34);
       ctx.closePath();
       ctx.fill();
+
+      // Hull gunwale stripe
+      ctx.strokeStyle = '#2a3428';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(0, -34);
+      ctx.bezierCurveTo(14, -20, 16, 10, 12, 34);
+      ctx.lineTo(-12, 34);
+      ctx.bezierCurveTo(-16, 10, -14, -20, 0, -34);
+      ctx.closePath();
+      ctx.stroke();
+
+      // Deck — lighter
+      ctx.fillStyle = '#4a5c44';
+      ctx.beginPath();
+      ctx.moveTo(0, -28);
+      ctx.bezierCurveTo(10, -16, 11, 8, 9, 28);
+      ctx.lineTo(-9, 28);
+      ctx.bezierCurveTo(-11, 8, -10, -16, 0, -28);
+      ctx.closePath();
+      ctx.fill();
+
+      // Railing lines (port and starboard)
+      ctx.strokeStyle = 'rgba(80,100,70,0.8)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(9, -22); ctx.lineTo(11, 20);
+      ctx.moveTo(-9, -22); ctx.lineTo(-11, 20);
+      ctx.stroke();
+
+      // Superstructure / cabin (front-center)
+      ctx.fillStyle = '#556650';
+      ctx.beginPath();
+      ctx.roundRect(-6, -18, 12, 16, 2);
+      ctx.fill();
+      ctx.strokeStyle = '#2a3428';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Cabin window
+      ctx.fillStyle = 'rgba(120,200,255,0.6)';
+      ctx.beginPath();
+      ctx.roundRect(-3.5, -15, 7, 5, 1);
+      ctx.fill();
+
+      // Gun mount (small turret on deck)
+      ctx.fillStyle = '#2e3a2c';
+      ctx.beginPath();
+      ctx.arc(0, -4, 5, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#1a2418';
+      ctx.beginPath();
+      ctx.roundRect(-1.5, -9, 3, 10, 1);
+      ctx.fill();
+
+      // Engine / stern motor
+      ctx.fillStyle = '#222e20';
+      ctx.beginPath();
+      ctx.roundRect(-5, 26, 10, 10, 2);
+      ctx.fill();
+      ctx.fillStyle = '#333';
+      ctx.beginPath();
+      ctx.arc(0, 32, 3.5, 0, Math.PI*2);
+      ctx.fill();
+
+      // Bow highlight
+      const bowGrad = ctx.createLinearGradient(0, -34, 0, 10);
+      bowGrad.addColorStop(0, 'rgba(255,255,255,0.10)');
+      bowGrad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = bowGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, -34);
+      ctx.bezierCurveTo(10, -16, 11, 8, 9, 28);
+      ctx.lineTo(-9, 28);
+      ctx.bezierCurveTo(-11, 8, -10, -16, 0, -34);
+      ctx.closePath();
+      ctx.fill();
+
       ctx.restore();
     });
   }
@@ -1237,20 +1520,20 @@ function drawSoldierTopDown(s, helmetColor, shoulderColor, vestColor, skinColor,
   ctx.ellipse(-1*f, 8*f, 5*f, 3.5*f, -0.4, 0, Math.PI*2);
   ctx.fill();
 
-  // Weapon (pointing forward = positive x)
+  // Weapon (pointing forward = positive x, offset to right side = positive y)
   ctx.fillStyle = '#1a1a1a';
   ctx.beginPath();
-  ctx.roundRect(4*f, -1.4*f, 16*f, 2.8*f, 1);
+  ctx.roundRect(4*f, 2.6*f, 16*f, 2.8*f, 1);
   ctx.fill();
   // Barrel highlight
   ctx.fillStyle = '#333';
   ctx.beginPath();
-  ctx.roundRect(13*f, -0.8*f, 7*f, 1.6*f, 1);
+  ctx.roundRect(13*f, 3.2*f, 7*f, 1.6*f, 1);
   ctx.fill();
   // Muzzle
   ctx.fillStyle = '#555';
   ctx.beginPath();
-  ctx.arc(20*f, 0, 1.4*f, 0, Math.PI*2);
+  ctx.arc(20*f, 4*f, 1.4*f, 0, Math.PI*2);
   ctx.fill();
 
   // Helmet base (main dome seen from above)
@@ -1726,7 +2009,7 @@ function drawDrone(drone) {
     ctx.rotate(spin);
 
     // Blade 1
-    ctx.fillStyle = 'rgba(120,210,140,0.50)';
+    ctx.fillStyle = 'rgba(180,200,180,0.35)';
     ctx.beginPath();
     ctx.ellipse(0, 0, 6, 1.4, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -1739,7 +2022,7 @@ function drawDrone(drone) {
     ctx.restore();
 
     // Rotor disc blur
-    ctx.fillStyle = 'rgba(80,200,100,0.07)';
+    ctx.fillStyle = 'rgba(0,0,0,0.08)';
     ctx.beginPath();
     ctx.arc(hx, hy, 6.5, 0, Math.PI * 2);
     ctx.fill();
@@ -1965,7 +2248,7 @@ function renderShop(expandedWeaponSection) {
       unlockEl.innerHTML =
         '<span style="font-size:20px">' + unlock.icon + '</span>' +
         '<div class="wpn-name">' + secName + stats + '</div>' +
-        '<span class="wpn-price">' + cost + ' coins</span>';
+                '<span class="wpn-price">' + cost + ' mynter</span>';
       if (canAfford) {
         unlockEl.addEventListener('click', () => {
           G.coins -= cost;
@@ -2048,8 +2331,8 @@ function renderShop(expandedWeaponSection) {
 
       let priceLabel;
       if (maxReached)      priceLabel = 'MAX';
-      else if (!reqMet)    priceLabel = 'Krev: ' + upg.requires;
-      else                 priceLabel = cost + ' coins';
+      else if (!reqMet)    priceLabel = 'Krav: ' + upg.requires;
+      else                 priceLabel = cost + ' mynter';
 
       const levelTag = level > 0 ? ' <span style="color:#0af;font-size:10px">Lv.' + level + '</span>' : '';
       const barHtml = (upg.maxLevel !== Infinity && upg.maxLevel > 1)
