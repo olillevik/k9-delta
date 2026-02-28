@@ -109,46 +109,157 @@ const COLORS = {
 };
 
 // ========== WEAPONS ==========
+// Base stats — multiplied by weapon upgrade level in getCurrentWeapon()
 const WEAPON_DEFS = [
-  { id: 'pistol',    name: 'Pistol',    icon: '🔫', damage: 18, rate: 400,  speed: 420, range: 320, spread: 0,    bullets: 1, ammo: Infinity },
-  { id: 'rifle',     name: 'Rifle',     icon: '🪖', damage: 28, rate: 180,  speed: 560, range: 480, spread: 0.05, bullets: 1, ammo: Infinity },
-  { id: 'shotgun',   name: 'Shotgun',   icon: '💥', damage: 22, rate: 700,  speed: 380, range: 260, spread: 0.25, bullets: 5, ammo: Infinity },
-  { id: 'smg',       name: 'SMG',       icon: '⚡', damage: 14, rate: 90,   speed: 500, range: 360, spread: 0.08, bullets: 1, ammo: Infinity },
-  { id: 'sniper',    name: 'Sniper',    icon: '🎯', damage: 90, rate: 1200, speed: 800, range: 700, spread: 0,    bullets: 1, ammo: Infinity },
-  { id: 'launcher',  name: 'Launcher',  icon: '🚀', damage: 120,rate: 1800, speed: 300, range: 600, spread: 0,    bullets: 1, ammo: Infinity, explosive: true },
+  { id: 'pistol',   name: 'Pistol',  icon: '🔫', damage: 18, rate: 400,  speed: 420, range: 320, spread: 0,    bullets: 1, explosive: false },
+  { id: 'rifle',    name: 'Rifle',   icon: '🪖', damage: 28, rate: 180,  speed: 560, range: 480, spread: 0.05, bullets: 1, explosive: false },
+  { id: 'shotgun',  name: 'Shotgun', icon: '💥', damage: 22, rate: 700,  speed: 380, range: 260, spread: 0.25, bullets: 5, explosive: false },
+  { id: 'smg',      name: 'SMG',     icon: '⚡', damage: 14, rate: 90,   speed: 500, range: 360, spread: 0.08, bullets: 1, explosive: false },
+  { id: 'sniper',   name: 'Sniper',  icon: '🎯', damage: 90, rate: 1200, speed: 800, range: 700, spread: 0,    bullets: 1, explosive: false },
+  { id: 'launcher', name: 'RPG',     icon: '🚀', damage: 120,rate: 1800, speed: 300, range: 600, spread: 0,    bullets: 1, explosive: true  },
 ];
 
-// ========== SHOP UPGRADES ==========
-const SHOP_ITEMS = [
-  // Weapons
-  { id: 'buy_rifle',    section: 'Våpen',      name: 'Assault Rifle', desc: 'Rask og presis', price: 80, maxLevel: 1,
+// ========== UPGRADE CATALOGUE ==========
+// Each upgrade has infinite levels. Price and effect scale with current level.
+// onBuy(g, level) is called with the NEW level (1, 2, 3, ...)
+const UPGRADES = [
+  // --- Unlock weapons (level 1 = unlock, no further levels) ---
+  { id: 'buy_rifle',    section: 'Våpen',    name: 'Assault Rifle',  icon: '🪖',
+    maxLevel: 1,
+    baseCost: 80,
+    desc: () => 'Lås opp Assault Rifle',
     onBuy: (g) => { g.unlockedWeapons.add('rifle'); } },
-  { id: 'buy_shotgun',  section: 'Våpen',      name: 'Shotgun',       desc: '5 pellets, nærskudd', price: 100, maxLevel: 1,
+  { id: 'buy_shotgun',  section: 'Våpen',    name: 'Shotgun',        icon: '💥',
+    maxLevel: 1,
+    baseCost: 100,
+    desc: () => 'Lås opp Shotgun',
     onBuy: (g) => { g.unlockedWeapons.add('shotgun'); } },
-  { id: 'buy_smg',      section: 'Våpen',      name: 'SMG',           desc: 'Veldig rask ildgivning', price: 120, maxLevel: 1,
+  { id: 'buy_smg',      section: 'Våpen',    name: 'SMG',            icon: '⚡',
+    maxLevel: 1,
+    baseCost: 120,
+    desc: () => 'Lås opp SMG',
     onBuy: (g) => { g.unlockedWeapons.add('smg'); } },
-  { id: 'buy_sniper',   section: 'Våpen',      name: 'Sniper Rifle',  desc: 'En skudd, ett drap', price: 180, maxLevel: 1,
+  { id: 'buy_sniper',   section: 'Våpen',    name: 'Sniper',         icon: '🎯',
+    maxLevel: 1,
+    baseCost: 180,
+    desc: () => 'Lås opp Sniper Rifle',
     onBuy: (g) => { g.unlockedWeapons.add('sniper'); } },
-  { id: 'buy_launcher', section: 'Våpen',      name: 'RPG',           desc: 'Eksplosiv skade', price: 300, maxLevel: 1,
+  { id: 'buy_launcher', section: 'Våpen',    name: 'RPG',            icon: '🚀',
+    maxLevel: 1,
+    baseCost: 300,
+    desc: () => 'Lås opp RPG (eksplosiv)',
     onBuy: (g) => { g.unlockedWeapons.add('launcher'); } },
-  // Armor
-  { id: 'armor1',  section: 'Rustning',  name: 'Vest Lvl 1',   desc: '+30 maks HP',      price: 60,  maxLevel: 1, onBuy: (g) => { g.player.maxHp += 30; g.player.hp += 30; } },
-  { id: 'armor2',  section: 'Rustning',  name: 'Vest Lvl 2',   desc: '+50 maks HP',      price: 120, maxLevel: 1, onBuy: (g) => { g.player.maxHp += 50; g.player.hp += 50; }, requires: 'armor1' },
-  { id: 'armor3',  section: 'Rustning',  name: 'Vest Lvl 3',   desc: '+80 maks HP',      price: 220, maxLevel: 1, onBuy: (g) => { g.player.maxHp += 80; g.player.hp += 80; }, requires: 'armor2' },
-  { id: 'regen1',  section: 'Rustning',  name: 'Regen Lvl 1',  desc: '+0.5 HP/s',        price: 80,  maxLevel: 1, onBuy: (g) => { g.player.regen += 0.5; } },
-  { id: 'regen2',  section: 'Rustning',  name: 'Regen Lvl 2',  desc: '+1 HP/s',          price: 160, maxLevel: 1, onBuy: (g) => { g.player.regen += 1; }, requires: 'regen1' },
-  { id: 'speed1',  section: 'Rustning',  name: 'Speed Boots',  desc: '+20% fart',        price: 90,  maxLevel: 1, onBuy: (g) => { g.player.speed *= 1.2; } },
-  // Dog
-  { id: 'dog',     section: 'Hund',      name: 'Rekrutter Hund', desc: 'Hunden Rex jakter fiender', price: 150, maxLevel: 1, onBuy: (g) => { g.dog = createDog(g); } },
-  { id: 'dog_dmg', section: 'Hund',      name: 'Rex: Sterkere', desc: '+40% hundeskade', price: 100, maxLevel: 3, onBuy: (g) => { g.dog && (g.dog.damage *= 1.4); }, requires: 'dog' },
-  { id: 'dog_spd', section: 'Hund',      name: 'Rex: Raskere',  desc: '+30% hundehastighet', price: 80, maxLevel: 3, onBuy: (g) => { g.dog && (g.dog.speed *= 1.3); }, requires: 'dog' },
-  { id: 'dog_hp',  section: 'Hund',      name: 'Rex: Pansret',  desc: '+80 hundehelse',  price: 90,  maxLevel: 3, onBuy: (g) => { g.dog && (g.dog.maxHp += 80) && (g.dog.hp += 80); }, requires: 'dog' },
-  // Drone
-  { id: 'drone',     section: 'Drone',   name: 'Rekrutter Drone', desc: 'Drone skyter automatisk', price: 200, maxLevel: 1, onBuy: (g) => { g.drone = createDrone(g); } },
-  { id: 'drone_dmg', section: 'Drone',   name: 'Drone: Kanon',  desc: '+50% droneskade', price: 120, maxLevel: 3, onBuy: (g) => { g.drone && (g.drone.damage *= 1.5); }, requires: 'drone' },
-  { id: 'drone_rate',section: 'Drone',   name: 'Drone: Hurtigild', desc: '+40% ildrate', price: 100, maxLevel: 3, onBuy: (g) => { g.drone && (g.drone.fireRate *= 0.7); }, requires: 'drone' },
-  { id: 'drone_hp',  section: 'Drone',   name: 'Drone: Pansret',desc: '+60 dronehelse',  price: 90,  maxLevel: 3, onBuy: (g) => { g.drone && (g.drone.maxHp += 60) && (g.drone.hp += 60); }, requires: 'drone' },
+
+  // --- Weapon damage upgrades (infinite) ---
+  { id: 'wpn_dmg',  section: 'Våpen',    name: 'Skade-oppgradering', icon: '🔥',
+    maxLevel: Infinity,
+    baseCost: 60,
+    costScale: 1.4,
+    desc: (lvl) => `+15% skade alle våpen (Nåværende: +${Math.round((Math.pow(1.15,lvl)-1)*100)}%)`,
+    onBuy: (g, lvl) => { g.weaponDmgMult = (g.weaponDmgMult||1) * 1.15; } },
+  { id: 'wpn_rate', section: 'Våpen',    name: 'Ildrate-oppgradering', icon: '⚡',
+    maxLevel: Infinity,
+    baseCost: 70,
+    costScale: 1.4,
+    desc: (lvl) => `+12% raskere skyting (Nåværende: +${Math.round((Math.pow(1.12,lvl)-1)*100)}%)`,
+    onBuy: (g, lvl) => { g.weaponRateMult = (g.weaponRateMult||1) * 0.88; } },
+
+  // --- Armor (infinite) ---
+  { id: 'armor',  section: 'Rustning',  name: 'Pansring',    icon: '🛡️',
+    maxLevel: Infinity,
+    baseCost: 60,
+    costScale: 1.35,
+    desc: (lvl) => `+25 maks HP (Total bonus: +${lvl*25})`,
+    onBuy: (g) => { g.player.maxHp += 25; g.player.hp += 25; } },
+  { id: 'regen',  section: 'Rustning',  name: 'Regenerasjon', icon: '💉',
+    maxLevel: Infinity,
+    baseCost: 80,
+    costScale: 1.45,
+    desc: (lvl) => `+0.8 HP/s (Total: ${(lvl*0.8).toFixed(1)} HP/s)`,
+    onBuy: (g) => { g.player.regen += 0.8; } },
+  { id: 'speed',  section: 'Rustning',  name: 'Hastighet',   icon: '👟',
+    maxLevel: Infinity,
+    baseCost: 90,
+    costScale: 1.5,
+    desc: (lvl) => `+10% fart (Total: +${Math.round((Math.pow(1.1,lvl)-1)*100)}%)`,
+    onBuy: (g) => { g.player.speed *= 1.10; } },
+
+  // --- Dog ---
+  { id: 'dog',      section: 'Rex (hund)', name: 'Rekrutter Rex', icon: '🐕',
+    maxLevel: 1,
+    baseCost: 150,
+    desc: () => 'Rex jakter og biter fiender',
+    onBuy: (g) => { g.dog = createDog(g); } },
+  { id: 'dog_dmg',  section: 'Rex (hund)', name: 'Rex: Bittskade',   icon: '🦷',
+    maxLevel: Infinity,
+    baseCost: 80,
+    costScale: 1.4,
+    requires: 'dog',
+    desc: (lvl) => `+30% bittskade (Total: +${Math.round((Math.pow(1.3,lvl)-1)*100)}%)`,
+    onBuy: (g) => { if(g.dog) g.dog.damage *= 1.3; } },
+  { id: 'dog_spd',  section: 'Rex (hund)', name: 'Rex: Hastighet',   icon: '🐾',
+    maxLevel: Infinity,
+    baseCost: 70,
+    costScale: 1.35,
+    requires: 'dog',
+    desc: (lvl) => `+20% hundehastighet`,
+    onBuy: (g) => { if(g.dog) g.dog.speed *= 1.20; } },
+  { id: 'dog_hp',   section: 'Rex (hund)', name: 'Rex: Pansring',    icon: '🦺',
+    maxLevel: Infinity,
+    baseCost: 70,
+    costScale: 1.35,
+    requires: 'dog',
+    desc: (lvl) => `+60 Rex HP (Total bonus: +${lvl*60})`,
+    onBuy: (g) => { if(g.dog){ g.dog.maxHp+=60; g.dog.hp+=60; } } },
+  { id: 'dog_rate', section: 'Rex (hund)', name: 'Rex: Angrepsrate', icon: '💢',
+    maxLevel: Infinity,
+    baseCost: 75,
+    costScale: 1.4,
+    requires: 'dog',
+    desc: (lvl) => `+20% raskere angrep`,
+    onBuy: (g) => { if(g.dog) g.dog.attackRate *= 0.80; } },
+
+  // --- Drone ---
+  { id: 'drone',      section: 'Drone',    name: 'Rekrutter Drone',  icon: '🚁',
+    maxLevel: 1,
+    baseCost: 200,
+    desc: () => 'Drone sirkulerer og skyter automatisk',
+    onBuy: (g) => { g.drone = createDrone(g, 0); g.drones = [g.drone]; } },
+  { id: 'drone_dmg',  section: 'Drone',    name: 'Drone: Skade',     icon: '💣',
+    maxLevel: Infinity,
+    baseCost: 90,
+    costScale: 1.4,
+    requires: 'drone',
+    desc: (lvl) => `+35% droneskade (Total: +${Math.round((Math.pow(1.35,lvl)-1)*100)}%)`,
+    onBuy: (g) => { (g.drones||[g.drone].filter(Boolean)).forEach(d => { if(d) d.damage *= 1.35; }); } },
+  { id: 'drone_rate', section: 'Drone',    name: 'Drone: Ildrate',   icon: '🔁',
+    maxLevel: Infinity,
+    baseCost: 85,
+    costScale: 1.4,
+    requires: 'drone',
+    desc: (lvl) => `+25% raskere droneskyting`,
+    onBuy: (g) => { (g.drones||[g.drone].filter(Boolean)).forEach(d => { if(d) d.fireRate *= 0.75; }); } },
+  { id: 'drone_hp',   section: 'Drone',    name: 'Drone: Pansring',  icon: '🔩',
+    maxLevel: Infinity,
+    baseCost: 75,
+    costScale: 1.35,
+    requires: 'drone',
+    desc: (lvl) => `+50 drone HP (Total bonus: +${lvl*50})`,
+    onBuy: (g) => { (g.drones||[g.drone].filter(Boolean)).forEach(d => { if(d){ d.maxHp+=50; d.hp+=50; } }); } },
+  { id: 'drone_count',section: 'Drone',    name: 'Drone: Ekstra',    icon: '➕',
+    maxLevel: 3,
+    baseCost: 250,
+    costScale: 2.0,
+    requires: 'drone',
+    desc: (lvl) => `Legg til drone nr. ${lvl+1} (maks 4)`,
+    onBuy: (g) => { g.extraDrones = (g.extraDrones||0)+1; rebuildDrones(g); } },
 ];
+
+function upgradeCost(upg, currentLevel) {
+  const base = upg.baseCost || 60;
+  const scale = upg.costScale || 1.0;
+  return Math.round(base * Math.pow(scale, currentLevel));
+}
 
 // ========== STATE ==========
 let G; // global game state
@@ -203,6 +314,8 @@ function initGame() {
     drops: [],
     dog: null,
     drone: null,
+    drones: [],
+    extraDrones: 0,
     unlockedWeapons: new Set(['pistol']),
     purchasedUpgrades: new Set(),
     upgradeLevels: {},
@@ -246,14 +359,33 @@ function createDog(g) {
   };
 }
 
-function createDrone(g) {
+function createDrone(g, orbitOffset) {
   return {
     x: g.player.x, y: g.player.y - 40,
     r: 9, hp: 80, maxHp: 80,
-    orbitAngle: 0, orbitRadius: 55,
+    orbitAngle: orbitOffset || 0, orbitRadius: 55,
     damage: 20, fireRate: 600,
     fireTimer: 0, color: COLORS.drone,
   };
+}
+
+function rebuildDrones(g) {
+  // Called after buying extra drones. Keeps the first drone's stats, adds new ones.
+  const total = 1 + (g.extraDrones || 0);
+  // Ensure g.drones array is in sync
+  if (!g.drones) g.drones = g.drone ? [g.drone] : [];
+  while (g.drones.length < total) {
+    const offset = (g.drones.length / total) * Math.PI * 2;
+    const nd = createDrone(g, offset);
+    // Copy stats from first drone if it exists
+    if (g.drones.length > 0) {
+      nd.damage = g.drones[0].damage;
+      nd.fireRate = g.drones[0].fireRate;
+      nd.maxHp = g.drones[0].maxHp;
+      nd.hp = g.drones[0].maxHp;
+    }
+    g.drones.push(nd);
+  }
 }
 
 // ========== WAVES ==========
@@ -275,13 +407,13 @@ function showWaveBanner(txt) {
 function buildWaveQueue() {
   const n = G.wave;
   const queue = [];
-  // scale enemy count and types with wave
-  const soldierCount = 5 + n * 3;
-  const heavyCount = Math.floor(n / 2);
-  const vehicleCount = Math.floor(n / 3);
-  for (let i = 0; i < soldierCount; i++) queue.push({ type: 'soldier', delay: i * 400 });
-  for (let i = 0; i < heavyCount; i++) queue.push({ type: 'heavy', delay: 800 + i * 600 });
-  for (let i = 0; i < vehicleCount; i++) queue.push({ type: 'vehicle', delay: 1200 + i * 900 });
+  // Exponential enemy count and HP scaling
+  const soldierCount = Math.floor(5 + n * 2.5 + n * n * 0.3);
+  const heavyCount   = Math.floor(n * 0.8 + n * n * 0.08);
+  const vehicleCount = Math.floor(n * 0.5 + n * n * 0.04);
+  for (let i = 0; i < soldierCount; i++) queue.push({ type: 'soldier', delay: i * 350 });
+  for (let i = 0; i < heavyCount;   i++) queue.push({ type: 'heavy',   delay: 600 + i * 500 });
+  for (let i = 0; i < vehicleCount; i++) queue.push({ type: 'vehicle', delay: 1000 + i * 800 });
   queue.sort((a, b) => a.delay - b.delay);
   G.waveSpawnQueue = queue;
   G.waveEnemiesLeft = queue.length;
@@ -302,13 +434,15 @@ function spawnEnemy(type) {
   x = Math.max(20, Math.min(G.mapW - 20, x));
   y = Math.max(20, Math.min(G.mapH - 20, y));
 
-  const scale = 1 + (G.wave - 1) * 0.08;
+  // Exponential HP/speed scaling
+  const hpScale  = Math.pow(1.12, G.wave - 1);
+  const spdScale = 1 + (G.wave - 1) * 0.05;
   if (type === 'soldier') {
-    G.enemies.push({ type:'soldier', x, y, r:11, hp: 40*scale, maxHp:40*scale, speed:80+G.wave*3, damage:10, fireRate:1400, fireTimer:rnd(0,1400), range:280, color:COLORS.enemySoldier, score:10, coins:rndInt(2,5) });
+    G.enemies.push({ type:'soldier', x, y, r:11, hp: 40*hpScale, maxHp:40*hpScale, speed:(80+G.wave*2)*spdScale, damage:10+G.wave*0.5, fireRate:1400, fireTimer:rnd(0,1400), range:280, color:COLORS.enemySoldier, score:10, coins:rndInt(2,5) });
   } else if (type === 'heavy') {
-    G.enemies.push({ type:'heavy', x, y, r:16, hp: 140*scale, maxHp:140*scale, speed:55+G.wave*2, damage:18, fireRate:900, fireTimer:rnd(0,900), range:240, color:COLORS.enemyHeavy, score:30, coins:rndInt(8,14) });
+    G.enemies.push({ type:'heavy', x, y, r:16, hp: 140*hpScale, maxHp:140*hpScale, speed:(55+G.wave*1.5)*spdScale, damage:18+G.wave*0.8, fireRate:900, fireTimer:rnd(0,900), range:240, color:COLORS.enemyHeavy, score:30, coins:rndInt(8,14) });
   } else if (type === 'vehicle') {
-    G.enemies.push({ type:'vehicle', x, y, r:22, hp: 300*scale, maxHp:300*scale, speed:100+G.wave*4, damage:25, fireRate:1800, fireTimer:rnd(0,1800), range:350, color:COLORS.enemyVehicle, score:80, coins:rndInt(20,35) });
+    G.enemies.push({ type:'vehicle', x, y, r:22, hp: 300*hpScale, maxHp:300*hpScale, speed:(100+G.wave*3)*spdScale, damage:25+G.wave*1.2, fireRate:1800, fireTimer:rnd(0,1800), range:350, color:COLORS.enemyVehicle, score:80, coins:rndInt(20,35) });
   }
 }
 
@@ -479,9 +613,18 @@ function update(dt) {
     updateDog(G.dog, dtSec);
   }
 
-  // Drone
-  if (G.drone) {
-    updateDrone(G.drone, dtSec);
+  // Drones
+  if (G.drones && G.drones.length > 0) {
+    const total = G.drones.length;
+    G.drones = G.drones.filter(drone => {
+      updateDrone(drone, dtSec, total);
+      return drone.hp > 0;
+    });
+    // Keep G.drone in sync (first drone)
+    G.drone = G.drones[0] || null;
+  } else if (G.drone) {
+    updateDrone(G.drone, dtSec, 1);
+    if (G.drone.hp <= 0) G.drone = null;
   }
 
   // Particles
@@ -510,14 +653,24 @@ function update(dt) {
   // Update companion status
   let cs = '';
   if (G.dog) cs += 'Rex HP: ' + Math.ceil(G.dog.hp) + '/' + G.dog.maxHp + '  ';
-  if (G.drone) cs += 'Drone HP: ' + Math.ceil(G.drone.hp) + '/' + G.drone.maxHp;
+  if (G.drones && G.drones.length > 0) {
+    G.drones.forEach((d, i) => { cs += `Drone${G.drones.length>1?i+1:''} HP: ${Math.ceil(d.hp)}/${d.maxHp}  `; });
+  } else if (G.drone) {
+    cs += 'Drone HP: ' + Math.ceil(G.drone.hp) + '/' + G.drone.maxHp;
+  }
   document.getElementById('companion-status').textContent = cs;
 }
 
 function getCurrentWeapon() {
   const p = G.player;
   const wname = p.weapons[p.weaponIdx] || 'pistol';
-  return WEAPON_DEFS.find(w => w.id === wname) || WEAPON_DEFS[0];
+  const base = WEAPON_DEFS.find(w => w.id === wname) || WEAPON_DEFS[0];
+  const dmgMult = G.weaponDmgMult || 1;
+  const rateMult = G.weaponRateMult || 1;
+  return Object.assign({}, base, {
+    damage: base.damage * dmgMult,
+    rate: base.rate * rateMult,
+  });
 }
 
 function nearestEnemy(from) {
@@ -600,9 +753,9 @@ function updateDog(dog, dtSec) {
   }
 }
 
-function updateDrone(drone, dtSec) {
-  if (drone.hp <= 0) { G.drone = null; return; }
-  // Orbit around player
+function updateDrone(drone, dtSec, total) {
+  if (drone.hp <= 0) return;
+  // Orbit around player, evenly spaced if multiple drones
   drone.orbitAngle += dtSec * 1.5;
   drone.x = G.player.x + Math.cos(drone.orbitAngle) * drone.orbitRadius;
   drone.y = G.player.y + Math.sin(drone.orbitAngle) * drone.orbitRadius;
@@ -654,8 +807,12 @@ function render() {
   // Dog
   if (G.dog) drawDog(G.dog);
 
-  // Drone
-  if (G.drone) drawDrone(G.drone);
+  // Drones
+  if (G.drones && G.drones.length > 0) {
+    G.drones.forEach(d => drawDrone(d));
+  } else if (G.drone) {
+    drawDrone(G.drone);
+  }
 
   // Enemies
   G.enemies.forEach(e => drawEnemy(e));
@@ -1149,9 +1306,9 @@ function renderShop() {
 
   // Group by section
   const sections = {};
-  SHOP_ITEMS.forEach(item => {
-    if (!sections[item.section]) sections[item.section] = [];
-    sections[item.section].push(item);
+  UPGRADES.forEach(upg => {
+    if (!sections[upg.section]) sections[upg.section] = [];
+    sections[upg.section].push(upg);
   });
 
   Object.keys(sections).forEach(section => {
@@ -1161,29 +1318,45 @@ function renderShop() {
     const grid = document.createElement('div');
     grid.className = 'shop-items';
 
-    sections[section].forEach(item => {
-      const level = G.upgradeLevels[item.id] || 0;
-      const maxReached = level >= item.maxLevel;
-      const owned = maxReached;
-      const reqMet = !item.requires || (G.upgradeLevels[item.requires] || 0) >= 1;
-      const canAfford = G.coins >= item.price;
+    sections[section].forEach(upg => {
+      const level = G.upgradeLevels[upg.id] || 0;
+      const maxReached = upg.maxLevel !== Infinity && level >= upg.maxLevel;
+      const cost = upgradeCost(upg, level);
+      const reqMet = !upg.requires || (G.upgradeLevels[upg.requires] || 0) >= 1;
+      const canAfford = G.coins >= cost;
+      const levelBarPct = upg.maxLevel === Infinity ? 0 : (level / upg.maxLevel) * 100;
 
       const itemEl = document.createElement('div');
-      itemEl.className = 'shop-item' + (owned ? ' owned' : '') + (!canAfford && !owned ? ' cant-afford' : '');
+      itemEl.className = 'shop-item'
+        + (maxReached ? ' owned' : '')
+        + (!maxReached && (!canAfford || !reqMet) ? ' cant-afford' : '');
+
+      let priceLabel;
+      if (maxReached) {
+        priceLabel = 'MAX';
+      } else if (!reqMet) {
+        priceLabel = 'Krev: ' + upg.requires;
+      } else {
+        priceLabel = cost + ' coins';
+      }
+
+      const levelTag = level > 0 ? ` <span style="color:#0af;font-size:10px">Lv.${level}</span>` : '';
 
       itemEl.innerHTML = `
-        <h4>${item.name}</h4>
-        <p>${item.desc}</p>
-        <div class="price">${owned ? 'OWNED' : (reqMet ? item.price + ' coins' : 'Krev: ' + item.requires)}</div>
-        ${item.maxLevel > 1 ? `<div class="level-bar"><div class="level-fill" style="width:${(level/item.maxLevel)*100}%"></div></div>` : ''}
+        <h4>${upg.icon || ''} ${upg.name}${levelTag}</h4>
+        <p>${upg.desc(level)}</p>
+        <div class="price">${priceLabel}</div>
+        ${upg.maxLevel !== Infinity && upg.maxLevel > 1
+          ? `<div class="level-bar"><div class="level-fill" style="width:${levelBarPct}%"></div></div>`
+          : ''}
       `;
 
-      if (!owned && canAfford && reqMet) {
+      if (!maxReached && canAfford && reqMet) {
         itemEl.addEventListener('click', () => {
-          G.coins -= item.price;
-          item.onBuy(G);
-          G.upgradeLevels[item.id] = (G.upgradeLevels[item.id] || 0) + 1;
-          if (!G.purchasedUpgrades.has(item.id)) G.purchasedUpgrades.add(item.id);
+          G.coins -= cost;
+          const newLevel = (G.upgradeLevels[upg.id] || 0) + 1;
+          G.upgradeLevels[upg.id] = newLevel;
+          upg.onBuy(G, newLevel);
           renderShop();
           buildWeaponBar();
         });
