@@ -709,126 +709,147 @@ function render() {
   ctx.strokeRect(bx, by, barW, barH);
 }
 
+function drawSoldierTopDown(s, helmetColor, vestColor, vestAccent, skinColor, glowColor) {
+  // Called with ctx already translated to soldier center and rotated so +X = forward (facing direction).
+  // s = scale (1.0 for normal, 1.35 for heavy)
+  // All coordinates: X = forward/back, Y = left/right shoulder
+
+  // --- SHADOW ---
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 13*s, 10*s, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // --- FEET (furthest back, drawn first) ---
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.ellipse(-9*s, -4*s, 4*s, 2.5*s, 0, 0, Math.PI*2);  // left boot
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(-9*s,  4*s, 4*s, 2.5*s, 0, 0, Math.PI*2);  // right boot
+  ctx.fill();
+
+  // --- LOWER LEGS ---
+  ctx.fillStyle = '#1a2018';
+  ctx.beginPath();
+  ctx.ellipse(-6*s, -4*s, 4*s, 2.5*s, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(-6*s,  4*s, 4*s, 2.5*s, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // --- TORSO / VEST (wide flat oval — the widest part, shoulders sticking out) ---
+  ctx.fillStyle = vestColor;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 8*s, 9*s, 0, 0, Math.PI*2);   // wide oval = shoulders visible
+  ctx.fill();
+  // Vest front plate (slightly forward, narrower)
+  ctx.fillStyle = vestAccent;
+  ctx.beginPath();
+  ctx.ellipse(2*s, 0, 5*s, 5*s, 0, 0, Math.PI*2);
+  ctx.fill();
+  // Chest webbing lines
+  ctx.strokeStyle = '#1a2a18';
+  ctx.lineWidth = 1*s;
+  ctx.beginPath();
+  ctx.moveTo(-2*s, -3*s); ctx.lineTo(4*s, -3*s);
+  ctx.moveTo(-2*s,  3*s); ctx.lineTo(4*s,  3*s);
+  ctx.stroke();
+  // Belt/waist line
+  ctx.strokeStyle = '#111';
+  ctx.lineWidth = 1.5*s;
+  ctx.beginPath();
+  ctx.moveTo(-4*s, -7*s); ctx.lineTo(-4*s, 7*s);
+  ctx.stroke();
+
+  // --- ARMS (reaching forward toward gun) ---
+  ctx.fillStyle = vestColor;
+  ctx.beginPath();
+  ctx.ellipse(4*s, -6*s, 5*s, 2.5*s, -0.25, 0, Math.PI*2);  // left arm
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(4*s,  6*s, 5*s, 2.5*s,  0.25, 0, Math.PI*2);  // right arm
+  ctx.fill();
+
+  // --- GUN (along forward axis +X) ---
+  // Stock (at hands)
+  ctx.fillStyle = '#555';
+  ctx.beginPath();
+  ctx.roundRect(5*s, -1.5*s, 4*s, 3*s, 1);
+  ctx.fill();
+  // Receiver
+  ctx.fillStyle = '#3a3a3a';
+  ctx.beginPath();
+  ctx.roundRect(8*s, -1.5*s, 6*s, 3*s, 1);
+  ctx.fill();
+  // Barrel
+  ctx.fillStyle = '#555';
+  ctx.beginPath();
+  ctx.roundRect(13*s, -1*s, 8*s, 2*s, 1);
+  ctx.fill();
+  // Muzzle
+  ctx.fillStyle = '#777';
+  ctx.beginPath();
+  ctx.arc(21*s, 0, 1.5*s, 0, Math.PI*2);
+  ctx.fill();
+
+  // --- HEAD / HELMET (forward of torso) ---
+  // Helmet — round, prominent, the main visual feature from above
+  ctx.fillStyle = helmetColor;
+  ctx.beginPath();
+  ctx.arc(8*s, 0, 6.5*s, 0, Math.PI*2);
+  ctx.fill();
+  // Helmet rim shadow (gives it 3D dome look from above)
+  const rimGrad = ctx.createRadialGradient(7*s, -1*s, 1*s, 8*s, 0, 6.5*s);
+  rimGrad.addColorStop(0, 'rgba(255,255,255,0.12)');
+  rimGrad.addColorStop(0.6, 'rgba(0,0,0,0)');
+  rimGrad.addColorStop(1, 'rgba(0,0,0,0.4)');
+  ctx.fillStyle = rimGrad;
+  ctx.beginPath();
+  ctx.arc(8*s, 0, 6.5*s, 0, Math.PI*2);
+  ctx.fill();
+  // Helmet strap / rim edge
+  ctx.strokeStyle = '#111';
+  ctx.lineWidth = 1*s;
+  ctx.beginPath();
+  ctx.arc(8*s, 0, 6.5*s, 0, Math.PI*2);
+  ctx.stroke();
+  // Helmet ridge (center line from front to back)
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1.5*s;
+  ctx.beginPath();
+  ctx.moveTo(2*s, 0); ctx.lineTo(14*s, 0);
+  ctx.stroke();
+
+  // Face / balaclava visible at front of helmet
+  ctx.fillStyle = skinColor;
+  ctx.beginPath();
+  ctx.ellipse(12*s, 0, 3*s, 2.5*s, 0, 0, Math.PI*2);
+  ctx.fill();
+  // Eyes
+  ctx.fillStyle = glowColor || '#111';
+  ctx.beginPath();
+  ctx.ellipse(12*s, -1.3*s, 1.2*s, 1*s, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(12*s,  1.3*s, 1.2*s, 1*s, 0, 0, Math.PI*2);
+  ctx.fill();
+}
+
 function drawPlayer(p) {
   ctx.save();
   ctx.translate(p.x, p.y);
-  // facing points right (0 rad) = gun pointing right.
-  // Top-down: "forward" is the direction the soldier faces.
   ctx.rotate(p.facing);
 
-  // Ground shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 13, 10, 0, 0, Math.PI * 2);
-  ctx.fill();
+  drawSoldierTopDown(1.0, '#2e4a2a', '#2a3a28', '#3a5035', '#b08060', '#1a4a5a');
 
-  // ---- TOP-DOWN VIEW ----
-  // Forward = +X (right). Body is laid out along X axis.
-  // Legs: two ovals splayed left/right of center, slightly behind
-  ctx.fillStyle = '#1a2a18';
-  ctx.beginPath();
-  ctx.ellipse(-4, -6, 4, 3, 0.2, 0, Math.PI * 2); // left leg
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(-4, 6, 4, 3, -0.2, 0, Math.PI * 2); // right leg
-  ctx.fill();
-  // Boots (darker, forward of legs)
-  ctx.fillStyle = '#111';
-  ctx.beginPath();
-  ctx.ellipse(-1, -6, 3, 2.5, 0.3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(-1, 6, 3, 2.5, -0.3, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Torso (tactical vest) — wide oval centered slightly forward
-  ctx.fillStyle = '#2a3a28';
-  ctx.beginPath();
-  ctx.ellipse(1, 0, 9, 7, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Vest plate highlights
-  ctx.fillStyle = '#3a5035';
-  ctx.beginPath();
-  ctx.ellipse(2, -3, 4, 2, 0.1, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(2, 3, 4, 2, -0.1, 0, Math.PI * 2);
-  ctx.fill();
-  // Webbing stripe down center
-  ctx.fillStyle = '#1e2d1e';
-  ctx.fillRect(-1, -1, 8, 2);
-
-  // Arms stretched forward gripping the weapon
-  ctx.fillStyle = '#2a3a28';
-  ctx.beginPath();
-  ctx.ellipse(5, -5, 5, 2.5, -0.3, 0, Math.PI * 2); // left arm
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(5, 5, 5, 2.5, 0.3, 0, Math.PI * 2);  // right arm
-  ctx.fill();
-
-  // Rifle (pointing forward along +X)
-  ctx.fillStyle = '#444';
-  ctx.beginPath();
-  ctx.roundRect(4, -1.5, 18, 3, 1); // receiver + barrel
-  ctx.fill();
-  ctx.fillStyle = '#333';
-  ctx.beginPath();
-  ctx.roundRect(8, -1, 5, 2, 0.5); // handguard detail
-  ctx.fill();
-  ctx.fillStyle = '#666';
-  ctx.beginPath();
-  ctx.roundRect(20, -1, 4, 2, 1); // muzzle
-  ctx.fill();
-  // Stock at rear
-  ctx.fillStyle = '#555';
-  ctx.beginPath();
-  ctx.roundRect(2, -2, 4, 4, 1);
-  ctx.fill();
-
-  // Head — circle at forward end of torso
-  ctx.fillStyle = '#2a3a28'; // helmet top
-  ctx.beginPath();
-  ctx.arc(9, 0, 6, 0, Math.PI * 2);
-  ctx.fill();
-  // Helmet rim / shade
-  ctx.strokeStyle = '#1a2a18';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  // Face skin peeking under helmet front
-  ctx.fillStyle = '#b08060';
-  ctx.beginPath();
-  ctx.ellipse(11, 0, 3.5, 3, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Goggles (two small circles on face)
-  ctx.fillStyle = '#1a4a5a';
-  ctx.beginPath();
-  ctx.ellipse(11.5, -1.5, 1.8, 1.4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(11.5, 1.5, 1.8, 1.4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = '#557';
-  ctx.lineWidth = 0.6;
-  ctx.beginPath();
-  ctx.ellipse(11.5, -1.5, 1.8, 1.4, 0, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.ellipse(11.5, 1.5, 1.8, 1.4, 0, 0, Math.PI * 2);
-  ctx.stroke();
-  // Helmet center ridge
-  ctx.fillStyle = '#334d30';
-  ctx.beginPath();
-  ctx.ellipse(8, 0, 5, 1.5, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Glow ring
+  // Blue team glow ring
   ctx.shadowBlur = 8;
   ctx.shadowColor = '#4af';
   ctx.strokeStyle = '#4af8';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.arc(0, 0, p.r + 2, 0, Math.PI * 2);
+  ctx.arc(0, 0, p.r + 2, 0, Math.PI*2);
   ctx.stroke();
   ctx.shadowBlur = 0;
 
@@ -862,103 +883,16 @@ function drawEnemy(e) {
     ctx.lineTo(Math.cos(a2) * e.r * 1.1, Math.sin(a2) * e.r * 1.1);
     ctx.stroke();
   } else {
-    // --- Enemy Soldier / Heavy  — TOP-DOWN ---
-    // Rotate so the soldier faces the player. Forward = +X in local space.
+    // --- Enemy Soldier / Heavy — reuse shared top-down soldier draw ---
     const a2 = angle(e, G.player);
     ctx.rotate(a2);
 
     const s = e.type === 'heavy' ? 1.35 : 1.0;
-    const uniformColor = e.type === 'heavy' ? '#5a3010' : '#6b2020';
-    const accentColor  = e.type === 'heavy' ? '#f84'    : '#f44';
-    const helmetColor  = e.type === 'heavy' ? '#3a2008' : '#3a0808';
-
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 10 * s, 8 * s, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Legs — two ovals behind (left of) the torso
-    ctx.fillStyle = uniformColor;
-    ctx.beginPath();
-    ctx.ellipse(-5 * s, -5 * s, 4 * s, 3 * s, 0.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(-5 * s, 5 * s, 4 * s, 3 * s, -0.2, 0, Math.PI * 2);
-    ctx.fill();
-    // Boots (darker, slightly further back)
-    ctx.fillStyle = '#1a0a0a';
-    ctx.beginPath();
-    ctx.ellipse(-2 * s, -5 * s, 3 * s, 2 * s, 0.1, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(-2 * s, 5 * s, 3 * s, 2 * s, -0.1, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Torso
-    ctx.fillStyle = uniformColor;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 8 * s, 6 * s, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // Rank/badge stripe on chest
-    ctx.fillStyle = accentColor;
-    ctx.beginPath();
-    ctx.ellipse(1 * s, 0, 4 * s, 1.5 * s, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Arms reaching forward
-    ctx.fillStyle = uniformColor;
-    ctx.beginPath();
-    ctx.ellipse(4 * s, -4.5 * s, 4.5 * s, 2 * s, -0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(4 * s, 4.5 * s, 4.5 * s, 2 * s, 0.3, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Gun (pointing forward along +X)
-    ctx.fillStyle = '#444';
-    ctx.beginPath();
-    ctx.roundRect(3 * s, -1.5 * s, 16 * s, 3 * s, 1);
-    ctx.fill();
-    ctx.fillStyle = '#333';
-    ctx.fillRect(7 * s, -1 * s, 5 * s, 2 * s);
-    ctx.fillStyle = '#666';
-    ctx.beginPath();
-    ctx.roundRect(18 * s, -1 * s, 3 * s, 2 * s, 1);
-    ctx.fill();
-
-    // Head — at the forward tip of torso
-    ctx.fillStyle = '#b07050'; // skin
-    ctx.beginPath();
-    ctx.arc(9 * s, 0, 5 * s, 0, Math.PI * 2);
-    ctx.fill();
-    // Helmet over head
-    ctx.fillStyle = helmetColor;
-    ctx.beginPath();
-    ctx.arc(9 * s, 0, 5.5 * s, 0, Math.PI * 2);
-    ctx.fill();
-    // Helmet rim
-    ctx.strokeStyle = uniformColor;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    // Face gap (front of helmet open)
-    ctx.fillStyle = '#b07050';
-    ctx.beginPath();
-    ctx.ellipse(11 * s, 0, 3 * s, 2.5 * s, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // Red eyes
-    ctx.fillStyle = '#ff3333';
-    ctx.beginPath();
-    ctx.ellipse(11 * s, -1.4 * s, 1.2 * s, 1 * s, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(11 * s, 1.4 * s, 1.2 * s, 1 * s, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // Helmet top ridge
-    ctx.fillStyle = '#2a1204';
-    ctx.beginPath();
-    ctx.ellipse(8 * s, 0, 4 * s, 1.2 * s, 0, 0, Math.PI * 2);
-    ctx.fill();
+    if (e.type === 'heavy') {
+      drawSoldierTopDown(s, '#3a2008', '#5a3010', '#7a4820', '#b07050', '#ff3333');
+    } else {
+      drawSoldierTopDown(s, '#3a0808', '#6b2020', '#8b3030', '#b07050', '#ff3333');
+    }
   }
 
   ctx.restore();
