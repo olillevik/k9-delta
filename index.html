@@ -243,11 +243,11 @@ const UPGRADES = [
   { id: 'dog',      section: 'Hunder', name: 'Rekrutter Rex',      icon: '🐕',
     maxLevel: 1, baseCost: 150,
     desc: () => 'Rex jakter og biter fiender',
-    onBuy: (g) => { g.dog = createDog(g, -18); } },
+    onBuy: (g) => { g.dog = createDog(g, -30); } },
   { id: 'dog2',     section: 'Hunder', name: 'Rekrutter Buddy',     icon: '🐶',
     maxLevel: 1, baseCost: 200, requires: 'dog',
     desc: () => 'Buddy jakter ved siden av Rex',
-    onBuy: (g) => { g.dog2 = createDog(g, 18); if(g.dog){ g.dog2.damage=g.dog.damage; g.dog2.speed=g.dog.speed; g.dog2.attackRate=g.dog.attackRate; } } },
+    onBuy: (g) => { g.dog2 = createDog(g, 30); if(g.dog){ g.dog2.damage=g.dog.damage; g.dog2.speed=g.dog.speed; g.dog2.attackRate=g.dog.attackRate; } } },
   { id: 'dog_dmg',  section: 'Hunder', name: 'Bittskade',           icon: '🦷',
     maxLevel: Infinity, baseCost: 80, costScale: 1.4, requires: 'dog',
     desc: (lvl) => '+30% bittskade (Total: +' + Math.round((Math.pow(1.3,lvl)-1)*100) + '%)',
@@ -389,6 +389,8 @@ function createDog(g, offsetY) {
     attackCooldown: 0, attackRate: 800,
     target: null, state: 'follow',
     color: COLORS.dog,
+    followOffsetX: -35,
+    followOffsetY: offsetY || 0,
   };
 }
 
@@ -879,11 +881,14 @@ function updateDog(dog, dtSec) {
       spawnParticles(G, dog.x, dog.y, '#c82', 5, 20, 80, 150, 300);
     }
   } else {
-    const a = angle(dog, G.player);
-    const d = dist(dog, G.player);
-    if (d > 50) {
-      dog.x += Math.cos(a) * dog.speed * dtSec;
-      dog.y += Math.sin(a) * dog.speed * dtSec;
+    const targetX = G.player.x + (dog.followOffsetX || -35);
+    const targetY = G.player.y + (dog.followOffsetY || 0);
+    const dx = targetX - dog.x;
+    const dy = targetY - dog.y;
+    const d = Math.sqrt(dx*dx + dy*dy);
+    if (d > 15) {
+      dog.x += (dx/d) * dog.speed * dtSec;
+      dog.y += (dy/d) * dog.speed * dtSec;
     }
   }
 }
