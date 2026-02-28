@@ -53,6 +53,8 @@
   .wpn-upg-btn .upg-name { font-size: 12px; color: #fff; margin: 4px 0 2px; }
   .wpn-upg-btn .upg-desc { font-size: 10px; color: #888; margin-bottom: 6px; }
   .wpn-upg-btn .upg-price { font-size: 12px; color: #ff0; }
+  #game-over { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; z-index: 200; justify-content: center; align-items: center; flex-direction: column; color: #fff; text-align: center; }
+  #restart-btn { margin-top: 24px; padding: 12px 40px; background: #f00; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 16px; letter-spacing: 2px; }
   #restart-btn:hover { background: #f44; }
   #controls-hint { position: fixed; bottom: 10px; left: 10px; font-size: 11px; color: #444; }
   @media (hover: none) { #controls-hint { display: none; } }
@@ -94,7 +96,7 @@
   </div>
 </div>
 
-<div id="game-over" style="display:flex; display:none;">
+<div id="game-over">
   <h1>MISSION FAILED</h1>
   <p>Wave: <span id="go-wave">0</span></p>
   <p>Score: <span id="go-score">0</span></p>
