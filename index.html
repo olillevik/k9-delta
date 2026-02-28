@@ -132,7 +132,18 @@ const COLORS = {
   xp: '#ff0',
 };
 
-// ========== WEAPONS ==========
+// ========== ISLAND DEFINITIONS ==========
+const ISLAND_DEFS = [
+  { rx: 0.36, ry: 0.38, tilt: 0,    beach: 55, grass: '#3a6b2a', grassDark: '#2d5520', sand: '#c8a86e', name: 'Alpha Island' },
+  { rx: 0.28, ry: 0.44, tilt: 0.3,  beach: 45, grass: '#2d6b3a', grassDark: '#1e5028', sand: '#b8986e', name: 'Bravo Atoll' },
+  { rx: 0.42, ry: 0.30, tilt: -0.2, beach: 65, grass: '#4a7a2a', grassDark: '#376020', sand: '#d4b878', name: 'Charlie Key' },
+  { rx: 0.32, ry: 0.32, tilt: 0.5,  beach: 50, grass: '#3a5a1e', grassDark: '#284414', sand: '#c0a060', name: 'Delta Cay' },
+  { rx: 0.38, ry: 0.42, tilt: -0.4, beach: 70, grass: '#507a30', grassDark: '#3c6020', sand: '#ccaa70', name: 'Echo Reef' },
+  { rx: 0.25, ry: 0.35, tilt: 0.8,  beach: 40, grass: '#286030', grassDark: '#1a4820', sand: '#b49060', name: 'Foxtrot Shoal' },
+  { rx: 0.44, ry: 0.34, tilt: 0.1,  beach: 60, grass: '#406830', grassDark: '#2e5020', sand: '#d0ac6c', name: 'Golf Sandbar' },
+];
+
+
 // Base stats — per-weapon upgrade multipliers applied in getCurrentWeapon()
 const WEAPON_DEFS = [
   { id: 'pistol',   name: 'Pistol',      icon: '🔫', damage: 18,  rate: 400,  speed: 420, range: 320, spread: 0,    bullets: 1, explosive: false, flame: false },
@@ -140,7 +151,6 @@ const WEAPON_DEFS = [
   { id: 'shotgun',  name: 'Shotgun',     icon: '💥', damage: 22,  rate: 700,  speed: 380, range: 260, spread: 0.25, bullets: 5, explosive: false, flame: false },
   { id: 'smg',      name: 'SMG',         icon: '⚡', damage: 14,  rate: 90,   speed: 500, range: 360, spread: 0.08, bullets: 1, explosive: false, flame: false },
   { id: 'sniper',   name: 'Sniper',      icon: '🎯', damage: 90,  rate: 1200, speed: 800, range: 700, spread: 0,    bullets: 1, explosive: false, flame: false },
-  { id: 'launcher', name: 'RPG',         icon: '🚀', damage: 120, rate: 1800, speed: 300, range: 600, spread: 0,    bullets: 1, explosive: true,  flame: false },
   { id: 'flamer',   name: 'Flammekaster',icon: '🔥', damage: 8,   rate: 60,   speed: 220, range: 180, spread: 0.35, bullets: 3, explosive: false, flame: true  },
 ];
 
@@ -206,10 +216,6 @@ const UPGRADES = [
     maxLevel: 1, baseCost: 180,
     desc: () => 'Lås opp Sniper Rifle — massiv enkeltskudds-skade',
     onBuy: (g) => { g.unlockedWeapons.add('sniper'); } },
-  { id: 'buy_launcher', section: 'RPG',           name: 'Lås opp RPG',          icon: '🚀',
-    maxLevel: 1, baseCost: 300,
-    desc: () => 'Lås opp RPG — eksplosiv splintvirkning',
-    onBuy: (g) => { g.unlockedWeapons.add('launcher'); } },
   { id: 'buy_flamer',   section: 'Flammekaster',  name: 'Lås opp Flammekaster', icon: '🔥',
     maxLevel: 1, baseCost: 220,
     desc: () => 'Lås opp Flammekaster — brenner fiender over tid, korte hold',
@@ -222,7 +228,6 @@ const UPGRADES = [
   ...makeWpnUpgrades('shotgun',  'Shotgun',      '💥', 'buy_shotgun',  70, 65),
   ...makeWpnUpgrades('smg',      'SMG',          '⚡', 'buy_smg',      75, 70),
   ...makeWpnUpgrades('sniper',   'Sniper',       '🎯', 'buy_sniper',   90, 80),
-  ...makeWpnUpgrades('launcher', 'RPG',          '🚀', 'buy_launcher', 120, 110),
   ...makeWpnUpgrades('flamer',   'Flammekaster', '🔥', 'buy_flamer',   80, 75),
 
   // --- Armor (infinite) ---
@@ -354,6 +359,8 @@ function initGame() {
     mapW: 3200,
     mapH: 2400,
     boats: [],
+    islandIdx: 0,
+    islandTransition: 0, // ms remaining for fade-out/in
   };
 
   G.player.x = G.mapW / 2;
@@ -440,7 +447,22 @@ function startNextWave() {
   G.waveState = 'prep';
   G.waveTimer = 3000;
   document.getElementById('wave-val').textContent = G.wave;
-  showWaveBanner('WAVE ' + G.wave);
+
+  // Every 5 waves: switch island
+  if (G.wave > 1 && (G.wave - 1) % 5 === 0) {
+    G.islandIdx = (G.islandIdx + 1) % ISLAND_DEFS.length;
+    G.islandTransition = 1200;
+    G.player.x = G.mapW / 2;
+    G.player.y = G.mapH / 2;
+    G.enemies = [];
+    G.bullets = [];
+    G.enemyBullets = [];
+    G.boats = [];
+    const idef = ISLAND_DEFS[G.islandIdx];
+    showWaveBanner('WAVE ' + G.wave + '  —  ' + idef.name);
+  } else {
+    showWaveBanner('WAVE ' + G.wave);
+  }
 }
 
 function showWaveBanner(txt) {
@@ -475,7 +497,8 @@ function buildWaveQueue() {
 
 function spawnEnemy(type) {
   const cx = G.mapW / 2, cy = G.mapH / 2;
-  const islandRx = G.mapW * 0.36, islandRy = G.mapH * 0.38;
+  const idef = ISLAND_DEFS[G.islandIdx];
+  const islandRx = G.mapW * idef.rx, islandRy = G.mapH * idef.ry;
   const hpScale  = Math.pow(1.07, G.wave - 1);
   const spdScale = 1 + (G.wave - 1) * 0.03;
 
@@ -539,6 +562,8 @@ function update(dt) {
   const dtSec = dt / 1000;
   const p = G.player;
 
+  if (G.islandTransition > 0) G.islandTransition = Math.max(0, G.islandTransition - dt);
+
   G.camX = p.x - canvas.width / 2;
   G.camY = p.y - canvas.height / 2;
 
@@ -554,7 +579,8 @@ function update(dt) {
   const ny = p.y + dy * p.speed * dtSec;
   // Constrain player to island ellipse
   const icx = G.mapW / 2, icy = G.mapH / 2;
-  const irx = G.mapW * 0.36 - p.r, iry = G.mapH * 0.38 - p.r;
+  const _idef = ISLAND_DEFS[G.islandIdx];
+  const irx = G.mapW * _idef.rx - p.r, iry = G.mapH * _idef.ry - p.r;
   const normX = (nx - icx) / irx, normY = (ny - icy) / iry;
   if (normX * normX + normY * normY <= 1) {
     p.x = nx; p.y = ny;
@@ -966,7 +992,9 @@ function render() {
   ctx.translate(-G.camX, -G.camY);
 
   const cx = G.mapW / 2, cy = G.mapH / 2;
-  const islandRx = G.mapW * 0.36, islandRy = G.mapH * 0.38;
+  const idef = ISLAND_DEFS[G.islandIdx];
+  const islandRx = G.mapW * idef.rx, islandRy = G.mapH * idef.ry;
+  const islandTilt = idef.tilt;
 
   // Ocean background
   ctx.fillStyle = '#0a2a4a';
@@ -987,22 +1015,23 @@ function render() {
   ctx.globalAlpha = 1;
 
   // Island sandy beach ring
-  ctx.fillStyle = '#c8a86e';
+  ctx.fillStyle = idef.sand;
   ctx.beginPath();
-  ctx.ellipse(cx, cy, islandRx + 55, islandRy + 55, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx, cy, islandRx + idef.beach, islandRy + idef.beach, islandTilt, 0, Math.PI * 2);
   ctx.fill();
 
   // Island grass
-  ctx.fillStyle = '#3a6b2a';
+  ctx.fillStyle = idef.grass;
   ctx.beginPath();
-  ctx.ellipse(cx, cy, islandRx, islandRy, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx, cy, islandRx, islandRy, islandTilt, 0, Math.PI * 2);
   ctx.fill();
 
   // Grass texture patches
   for (let i = 0; i < 40; i++) {
-    const px = cx + Math.cos(i * 2.4) * islandRx * (0.2 + (i % 7) * 0.1);
-    const py = cy + Math.sin(i * 1.9) * islandRy * (0.2 + (i % 5) * 0.12);
-    ctx.fillStyle = i % 3 === 0 ? '#2d5520' : '#447733';
+    const ang = i * 2.4 + islandTilt;
+    const px = cx + Math.cos(ang) * islandRx * (0.2 + (i % 7) * 0.1);
+    const py = cy + Math.sin(ang) * islandRy * (0.2 + (i % 5) * 0.12);
+    ctx.fillStyle = i % 3 === 0 ? idef.grassDark : idef.grass;
     ctx.beginPath();
     ctx.ellipse(px, py, 18 + (i % 4) * 8, 12 + (i % 3) * 6, i * 0.5, 0, Math.PI * 2);
     ctx.fill();
@@ -1013,7 +1042,7 @@ function render() {
   ctx.lineWidth = 8;
   ctx.setLineDash([30, 20]);
   ctx.beginPath();
-  ctx.ellipse(cx, cy, islandRx + 58, islandRy + 58, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx, cy, islandRx + idef.beach + 3, islandRy + idef.beach + 3, islandTilt, 0, Math.PI * 2);
   ctx.stroke();
   ctx.setLineDash([]);
 
@@ -1165,6 +1194,23 @@ function render() {
     ctx.beginPath();
     ctx.arc(jx + joystick.dx * jR, jy + joystick.dy * jR, nR, 0, Math.PI * 2);
     ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Island transition fade overlay
+  if (G.islandTransition > 0) {
+    const alpha = Math.min(1, G.islandTransition / 600);
+    ctx.globalAlpha = alpha * 0.85;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 28px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(ISLAND_DEFS[G.islandIdx].name, canvas.width / 2, canvas.height / 2);
+    ctx.font = '16px Courier New';
+    ctx.fillText('EXTRACTING...', canvas.width / 2, canvas.height / 2 + 36);
+    ctx.textAlign = 'left';
     ctx.globalAlpha = 1;
   }
 }
