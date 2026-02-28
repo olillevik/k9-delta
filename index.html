@@ -30,6 +30,11 @@
   .shop-item .level-fill { height: 100%; background: #0af; border-radius: 2px; transition: width 0.3s; }
   #close-shop { display: block; margin: 18px auto 0; padding: 14px 40px; background: #0af; color: #000; border: none; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: bold; letter-spacing: 2px; width: 100%; box-sizing: border-box; }
   #close-shop:hover { background: #0df; }
+  .wpn-stats { display: flex; gap: 8px; margin-top: 5px; }
+  .wpn-stat { flex: 1; }
+  .wpn-stat-label { font-size: 9px; color: #666; margin-bottom: 2px; }
+  .wpn-stat-bar { height: 3px; background: #222; border-radius: 2px; }
+  .wpn-stat-fill { height: 100%; border-radius: 2px; }
   /* Weapon row: unlock + expand */
   .wpn-row { display: flex; gap: 8px; align-items: stretch; margin-bottom: 8px; }
   .wpn-unlock { flex: 1; background: #111; border: 1px solid #333; border-radius: 6px; padding: 10px 12px; cursor: pointer; pointer-events: all; transition: border-color 0.2s; display: flex; align-items: center; gap: 10px; }
@@ -1755,12 +1760,17 @@ function renderShop(expandedWeaponSection) {
   content.innerHTML = '';
 
   // First pass: collect all weapon sections (those with wpnUpgrade entries)
-  const weaponSections = {}; // section -> { unlock, dmg, rate }
+  const weaponSections = {}; // section -> { unlock, dmg, rate, weaponId }
   UPGRADES.forEach(upg => {
     if (upg.wpnUpgrade) {
       if (!weaponSections[upg.section]) weaponSections[upg.section] = {};
       const key = upg.id.endsWith('_dmg') ? 'dmg' : 'rate';
       weaponSections[upg.section][key] = upg;
+      // Extract weapon id from upgrade id: e.g. "buy_rifle_dmg" -> "rifle", "pistol_wpn_dmg" -> "pistol"
+      if (!weaponSections[upg.section].weaponId) {
+        const m = upg.id.match(/^(?:buy_)?(\w+?)(?:_wpn)?_(?:dmg|rate)$/);
+        if (m) weaponSections[upg.section].weaponId = m[1];
+      }
     }
   });
   // Second pass: attach unlock entries to weapon sections
@@ -1774,6 +1784,21 @@ function renderShop(expandedWeaponSection) {
       otherSections[upg.section].push(upg);
     }
   });
+
+  function wpnStatsHtml(weaponId) {
+    const wdef = WEAPON_DEFS.find(w => w.id === weaponId);
+    if (!wdef) return '';
+    const dmgPct   = Math.round(wdef.damage / 120 * 100);
+    const ratePct  = Math.round((1 - (wdef.rate - 60) / (1800 - 60)) * 100);
+    const rangePct = Math.round(wdef.range / 700 * 100);
+    const bar = (pct, color) =>
+      '<div class="wpn-stat-bar"><div class="wpn-stat-fill" style="width:' + pct + '%;background:' + color + '"></div></div>';
+    return '<div class="wpn-stats">' +
+      '<div class="wpn-stat"><div class="wpn-stat-label">SKADE</div>'      + bar(dmgPct,   '#f55') + '</div>' +
+      '<div class="wpn-stat"><div class="wpn-stat-label">ILDRATE</div>'    + bar(ratePct,  '#5af') + '</div>' +
+      '<div class="wpn-stat"><div class="wpn-stat-label">REKKEVIDDE</div>' + bar(rangePct, '#5f5') + '</div>' +
+      '</div>';
+  }
 
   // ---- Weapons section ----
   const wpnSecEl = document.createElement('div');
@@ -1791,16 +1816,17 @@ function renderShop(expandedWeaponSection) {
 
     // Left: weapon name / unlock button
     const unlockEl = document.createElement('div');
+    const stats = wpnStatsHtml(entry.weaponId);
     if (isOwned) {
       const dmgLvl = entry.dmg ? (G.upgradeLevels[entry.dmg.id] || 0) : 0;
       const rateLvl = entry.rate ? (G.upgradeLevels[entry.rate.id] || 0) : 0;
       const lvlStr = (dmgLvl > 0 || rateLvl > 0)
-        ? ' <span style="color:#0af;font-size:10px">Skade Lv.' + dmgLvl + ' | Ildrate Lv.' + rateLvl + '</span>'
+        ? '<div style="color:#0af;font-size:10px;margin-top:2px">Skade Lv.' + dmgLvl + ' | Ildrate Lv.' + rateLvl + '</div>'
         : '';
       unlockEl.className = 'wpn-unlock owned';
       unlockEl.innerHTML =
         '<span style="font-size:20px">' + (unlock ? unlock.icon : '🔫') + '</span>' +
-        '<span class="wpn-name">' + secName + lvlStr + '</span>' +
+        '<div class="wpn-name">' + secName + lvlStr + stats + '</div>' +
         '<span class="wpn-owned-label">EID</span>';
     } else {
       const cost = upgradeCost(unlock, 0);
@@ -1808,7 +1834,7 @@ function renderShop(expandedWeaponSection) {
       unlockEl.className = 'wpn-unlock' + (!canAfford ? ' cant-afford' : '');
       unlockEl.innerHTML =
         '<span style="font-size:20px">' + unlock.icon + '</span>' +
-        '<span class="wpn-name">' + secName + '</span>' +
+        '<div class="wpn-name">' + secName + stats + '</div>' +
         '<span class="wpn-price">' + cost + ' coins</span>';
       if (canAfford) {
         unlockEl.addEventListener('click', () => {
