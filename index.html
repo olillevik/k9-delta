@@ -848,6 +848,7 @@ function takeDamage(dmg) {
   spawnParticles(G, G.player.x, G.player.y, '#f00', 8, 30, 120, 200, 500);
   if (G.player.hp <= 0) {
     G.gameOver = true;
+    joyEnd();
     document.getElementById('go-wave').textContent = G.wave;
     document.getElementById('go-score').textContent = G.score;
     document.getElementById('go-kills').textContent = G.kills;
@@ -2027,9 +2028,9 @@ function joyEnd() {
 }
 
 canvas.addEventListener('touchstart', e => {
+  if (G && G.gameOver) return; // let touches pass through to DOM buttons
   e.preventDefault();
   for (const t of e.changedTouches) {
-    // Only track first joystick touch (left half of screen)
     if (!joystick.active && t.clientX < canvas.width * 0.5) {
       joyStart(t.clientX, t.clientY, t.identifier);
     }
@@ -2037,6 +2038,7 @@ canvas.addEventListener('touchstart', e => {
 }, { passive: false });
 
 canvas.addEventListener('touchmove', e => {
+  if (G && G.gameOver) return;
   e.preventDefault();
   for (const t of e.changedTouches) {
     if (t.identifier === joystick.touchId) {
@@ -2046,6 +2048,7 @@ canvas.addEventListener('touchmove', e => {
 }, { passive: false });
 
 canvas.addEventListener('touchend', e => {
+  if (G && G.gameOver) return;
   e.preventDefault();
   for (const t of e.changedTouches) {
     if (t.identifier === joystick.touchId) {
